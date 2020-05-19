@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "clin"
-version = "1.0.0"
+version = "1.0.dev0"
 description = "Cli for Nakadi resources management in infrastructure-as-a-code manner"
 homepage = "https://github.bus.zalan.do/derokhin/clin"
 license = "MIT"

@@ -40,7 +40,7 @@ def test_loads_auth_as_flat_lists_without_duplicates():
         write: true
     """
 
-    spec = yaml.load(yml)
+    spec = yaml.safe_load(yml)
     auth = Auth.from_spec(spec["auth"])
 
     assert auth.users.admins == ["hammond"]

@@ -1,0 +1,69 @@
+# This is expanded version of compact.clin.yaml
+process:
+  - id: Production
+    target: production # staging | production
+    paths: # list of paths to be processes. All yamls from these paths (non-recursive) will be processed 
+      - ./apply
+    env: # Variables' values to be used in substitution. 
+      TEAM: "avengers"
+      POSTFIX: ""
+      ADMINS: @@@./users/avengers.users.yaml
+      ANY_READ: false
+      ANY_WRITE: false
+      NOT_USED_OBJECT_VARIABLE_JUST_TO_ILLUSTRATE: # Values are not limited to scalars, arrays and objects are welcome.
+        key: value
+
+  - id: Staging
+    target: staging
+    paths: 
+      - ./apply
+    env: 
+      TEAM: "avengers"
+      POSTFIX: ""
+      ADMINS: @@@./users/avengers.users.yaml
+      ANY_READ: true
+      ANY_WRITE: true
+
+  - id: PR review nfury
+    target: staging
+    paths:
+      - ./apply
+    env:
+      TEAM: "avengers"
+      POSTFIX: "_review-nfury"
+      ADMINS: @@@./users/avengers.users.yaml
+      ANY_READ: true
+      ANY_WRITE: true
+
+  - id: PR review srogers
+    target: staging
+    paths:
+      - ./apply
+    env:
+      TEAM: "avengers"
+      POSTFIX: "_review-srogers"
+      ADMINS: @@@./users/avengers.users.yaml
+      ANY_READ: true
+      ANY_WRITE: true
+
+  - id: PR review pparker
+    target: staging
+    paths:
+      - ./apply
+    env:
+      TEAM: "avengers"
+      POSTFIX: "_review-pparker"
+      ADMINS: @@@./users/avengers.users.yaml
+      ANY_READ: true
+      ANY_WRITE: true
+
+  - id: PR review astark
+    target: staging
+    paths:
+      - ./apply
+    env:
+      TEAM: "avengers"
+      POSTFIX: "_review-astark"
+      ADMINS: @@@./users/avengers.users.yaml
+      ANY_READ: true
+      ANY_WRITE: true

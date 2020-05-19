@@ -1,0 +1,28 @@
+kind: event-type
+spec:
+  name: {{TEAM}}.zalandify.output{{POSTFIX}}
+  category: business
+  owningApplication: stups_zalandify
+  audience: company-internal
+  partitioning:
+    strategy: random
+    partitionCount: 4
+  cleanup:
+    policy: delete
+    retentionTimeDays: 4
+  schema:
+    compatibility: compatible
+    jsonSchema: @@@./../schemas/output.schema.yaml
+  auth:
+    users:
+      admins: {{ADMINS}}
+      readers:
+      writers:
+    services:
+      admins:
+      readers:
+      writers:
+        - stups_zalandify
+    anyToken:
+      read: true # we allow everybody to benefit from Zalandify
+      write: {{ANY_WRITE}}

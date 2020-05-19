@@ -1,0 +1,32 @@
+kind: event-type
+spec:
+  name: derokhin.clin.test # Event type name. If already exists, it will be updated
+  category: business  #  business | data | undefined
+  owningApplication: stups_your-application # application kio id with "stups_" prefix
+  audience: component-internal # component-internal | business-unit-internal | company-internal | external-partner | external-public
+  partitioning:
+    strategy: hash # hash | random | user_defined
+    keys: # list of keys in order to be used in hash strategy
+      - important_key
+    partitionCount: 2
+  cleanup:
+    policy: compact # compact | delete
+    retentionTimeDays: 4 # days before delete for corresponding policy
+  schema:
+    compatibility: compatible # none | forward | compatible
+    jsonSchema: @@@./schema.yaml # Includes file relatively to the current
+  auth:
+    users:
+      admins:
+        - {{USER}} # env vars will be used to resolve this template variable
+      writers:
+        - {{USER}}
+        - pjain
+      readers:
+    services:
+      admins:
+      readers:
+      writers:
+    anyToken:
+      read: true
+      write: false

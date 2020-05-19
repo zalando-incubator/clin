@@ -1,0 +1,5 @@
+environments:
+    staging:
+        nakadi_url: https://nakadi-staging.local
+    production:
+        nakadi_url: https://nakadi-production.local

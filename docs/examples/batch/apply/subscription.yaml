@@ -1,0 +1,16 @@
+kind: subscription
+spec:
+  owningApplication: stups_zalandify
+  eventTypes:
+    - {{TEAM}}.zalandify.input{{POSTFIX}}
+  consumerGroup: main
+  auth:
+    users:
+      admins: {{ADMINS}}
+      readers:
+    services:
+      admins:
+      readers:
+        - stups_zalandify
+    anyToken:
+      read: {{ANY_READ}}

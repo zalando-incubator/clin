@@ -1,0 +1,18 @@
+kind: subscription
+spec:
+  owningApplication: stups_your-application
+  eventTypes:
+    - zprice.derokhin.temp.clin.test1
+    - zprice.derokhin.temp.clin.test2
+  consumerGroup: main
+  auth:
+    users:
+      admins:
+        - {{USER}}
+      readers:
+        - {{USER}}
+    services:
+      admins:
+      readers:
+    anyToken:
+      read: true

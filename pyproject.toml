@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "clin"
+version = "1.0.0"
+description = "Cli for Nakadi resources management in infrastructure-as-a-code manner"
+homepage = "https://github.bus.zalan.do/derokhin/clin"
+license = "MIT"
+readme = "README.md"
+
+authors = [
+    "Dmitry Erokhin <dmitry.erokhin@zalando.de>",
+    "Daniel Stockhammer <daniel.stockhammer@zalando.de>"
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Topic :: Software Development :: Build Tools",
+]
+
+keywords = [ "Nakadi" ]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+requests = "^2.23.0"
+pyyaml = "^5.3.1"
+click = "^7.1.1"
+deepdiff = "^4.3.2"
+pygments = "^2.6.1"
+colorama = "^0.4.3"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.4.1"
+toml = "^0.10.0"
+
+[tool.poetry.scripts]
+clin = "clin.run:cli"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

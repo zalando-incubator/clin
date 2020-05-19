@@ -1,0 +1,6 @@
+type: object
+properties:
+  important_key:
+    type: string
+required:
+  - important_key

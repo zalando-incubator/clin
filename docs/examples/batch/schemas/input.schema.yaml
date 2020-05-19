@@ -1,0 +1,26 @@
+title: Zalandify service input schema
+description: |
+  Defines input to the service which is replacing each word in text starting with "s" to "z", preserving the case.
+  To prevent some unplesant substitutions optional array of words excluded from processing can be provided.
+  I.e.
+    blacklist: ["shell"]
+    text:      "She sells sea shells by the seashore"
+    RESULT:    "Zhe zells zea shells by the zeashore"
+
+type: object
+properties:
+  text:
+    $ref: '#/definitions/NonEmptyString'
+  blacklist:
+    type: array
+    items:
+      $ref: '#/definitions/NonEmptyString'
+      minLength: 1
+
+required:
+  - text
+
+definitions:
+  NonEmptyString:
+    type: string
+    minLength: 1

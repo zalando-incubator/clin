@@ -1,0 +1,10 @@
+title: Zalandify service output schema
+type: object
+properties:
+  text:
+    description: Zalandified text
+    type: string
+    minLength: 1
+
+required:
+  - text

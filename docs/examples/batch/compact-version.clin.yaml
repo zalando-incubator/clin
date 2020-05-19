@@ -1,0 +1,64 @@
+# This is compact (DRY by using yaml anchors) version of expanded-version.clin.yaml
+commonEnv: &COMMON_ENV
+  TEAM: "avengers"
+  POSTFIX: ""
+  ADMINS: @@@./users/avengers.users.yaml
+  NOT_USED_OBJECT_VARIABLE_JUST_TO_ILLUSTRATE: # Values are not limited to scalars, arrays and objects are welcome.
+    key: value
+
+commonStagingEnv: &COMMON_STAGING_ENV
+  ANY_READ: true
+  ANY_WRITE: true
+
+
+process:
+  - id: Production
+    target: production # staging | production
+    paths: [./apply] # list of paths to be processes. All yamls from these paths (non-recursive) will be processed
+    env: # Variables' values to be used in substitution.
+      <<: *COMMON_ENV
+      ANY_READ: false
+      ANY_WRITE: false
+
+  - id: Staging
+    target: staging
+    paths: 
+      - ./apply
+    env:
+      <<: *COMMON_ENV
+      <<: *COMMON_STAGING_ENV
+
+
+  - id: PR review nfury
+    target: staging
+    paths: [./apply]
+    env:
+      <<: *COMMON_ENV
+      <<: *COMMON_STAGING_ENV
+      POSTFIX: "_review-nfury"
+
+
+  - id: PR review srogers
+    target: staging
+    paths: [./apply]
+    env:
+      <<: *COMMON_ENV
+      <<: *COMMON_STAGING_ENV
+      POSTFIX: "_review-srogers"
+
+
+  - id: PR review pparker
+    target: staging
+    paths: [./apply]
+    env:
+      <<: *COMMON_ENV
+      <<: *COMMON_STAGING_ENV
+      POSTFIX: "_review-pparker"
+
+  - id: PR review astark
+    target: staging
+    paths: [./apply]
+    env:
+      <<: *COMMON_ENV
+      <<: *COMMON_STAGING_ENV
+      POSTFIX: "_review-astark"

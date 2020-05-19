@@ -27,6 +27,13 @@ jobs:
     - name: Install dependencies
       run: |
         poetry install
+    - name: Set version
+      run: |
+        poetry version ${GITHUB_REF##*/}
+        sed -i "s/'1.0.dev0'/'${GITHUB_REF##*/}'/g" clin/__init__.py
+    - name: Run tests
+      run: |
+        poetry run pytest
     - name: Build and publish
       env:
         POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}

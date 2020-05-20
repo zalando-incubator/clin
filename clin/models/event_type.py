@@ -11,9 +11,9 @@ from clin.models.auth import Auth
 
 @unique
 class Category(str, Enum):
-    BUSINESS = 'business'
-    DATA = 'data'
-    UNDEFINED = 'undefined'
+    BUSINESS = "business"
+    DATA = "data"
+    UNDEFINED = "undefined"
 
     def __str__(self) -> str:
         return str(self.value)
@@ -21,11 +21,11 @@ class Category(str, Enum):
 
 @unique
 class Audience(str, Enum):
-    COMPONENT_INTERNAL = 'component-internal'
-    BUSINESS_UNIT_INTERNAL = 'business-unit-internal'
-    COMPANY_INTERNAL = 'company-internal'
-    EXTERNAL_PARTNER = 'external-partner'
-    EXTERNAL_PUBLIC = 'external-public'
+    COMPONENT_INTERNAL = "component-internal"
+    BUSINESS_UNIT_INTERNAL = "business-unit-internal"
+    COMPANY_INTERNAL = "company-internal"
+    EXTERNAL_PARTNER = "external-partner"
+    EXTERNAL_PUBLIC = "external-public"
 
     def __str__(self) -> str:
         return str(self.value)
@@ -35,9 +35,9 @@ class Audience(str, Enum):
 class Partitioning:
     @unique
     class Strategy(str, Enum):
-        USER_DEFINED = 'user_defined'
-        HASH = 'hash'
-        RANDOM = 'random'
+        USER_DEFINED = "user_defined"
+        HASH = "hash"
+        RANDOM = "random"
 
         def __str__(self) -> str:
             return str(self.value)
@@ -51,8 +51,8 @@ class Partitioning:
 class Cleanup:
     @unique
     class Policy(str, Enum):
-        DELETE = 'delete'
-        COMPACT = 'compact'
+        DELETE = "delete"
+        COMPACT = "compact"
 
         def __str__(self) -> str:
             return str(self.value)
@@ -65,9 +65,9 @@ class Cleanup:
 class Schema:
     @unique
     class Compatibility(str, Enum):
-        NONE = 'none'
-        FORWARD = 'forward'
-        COMPATIBLE = 'compatible'
+        NONE = "none"
+        FORWARD = "forward"
+        COMPATIBLE = "compatible"
 
         def __str__(self) -> str:
             return str(self.value)
@@ -104,13 +104,15 @@ class EventType:
             ),
             cleanup=Cleanup(
                 policy=Cleanup.Policy(spec["cleanup"]["policy"]),
-                retention_time_days=spec["cleanup"].get("retentionTimeDays", 1)  # 1 is default Nakadi value
+                retention_time_days=spec["cleanup"].get(
+                    "retentionTimeDays", 1
+                ),  # 1 is default Nakadi value
             ),
             schema=Schema(
                 compatibility=Schema.Compatibility(spec["schema"]["compatibility"]),
-                json_schema=spec["schema"]["jsonSchema"]
+                json_schema=spec["schema"]["jsonSchema"],
             ),
-            auth=Auth.from_spec(spec["auth"])
+            auth=Auth.from_spec(spec["auth"]),
         )
 
     def to_spec(self) -> dict:
@@ -130,7 +132,7 @@ class EventType:
             },
             "schema": {
                 "compatibility": str(self.schema.compatibility),
-                "jsonSchema": self.schema.json_schema
+                "jsonSchema": self.schema.json_schema,
             },
             "auth": self.auth.to_spec() if self.auth else {},
         }

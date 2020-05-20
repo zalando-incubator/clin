@@ -22,10 +22,16 @@ class YamlLoader:
 
     def _load_yaml_from_file(self, path: Path, env: dict, visited: List[Path]) -> dict:
         def resolve_include(src):
-            if not isinstance(src, str) or not src.startswith(self._include_substitution):
+            if not isinstance(src, str) or not src.startswith(
+                self._include_substitution
+            ):
                 return src
             include_path = path.parent.joinpath(src[1:])
-            logging.debug("Will include file %s to %s", include_path.absolute().resolve(), path.absolute().resolve())
+            logging.debug(
+                "Will include file %s to %s",
+                include_path.absolute().resolve(),
+                path.absolute().resolve(),
+            )
             return self._load_yaml_from_file(include_path, env, visited + [path])
 
         if not path.exists():
@@ -37,17 +43,20 @@ class YamlLoader:
         if path in visited:
             raise YamlCycleReferenceError(path)
 
-        content = path \
-            .read_text() \
-            .replace(self._include_marker, self._include_substitution) \
-            .replace(self._variable_markers[0], self._variable_substitutions[0]) \
+        content = (
+            path.read_text()
+            .replace(self._include_marker, self._include_substitution)
+            .replace(self._variable_markers[0], self._variable_substitutions[0])
             .replace(self._variable_markers[1], self._variable_substitutions[1])
+        )
 
         yml = yaml.full_load(content)
         return walk(yml, resolve_include)
 
     def _resolve_variables(self, process, env, path):
-        vars_re = re.compile(rf"{self._variable_substitutions[0]}(.*?){self._variable_substitutions[1]}")
+        vars_re = re.compile(
+            rf"{self._variable_substitutions[0]}(.*?){self._variable_substitutions[1]}"
+        )
 
         def loop(s):
             if not isinstance(s, str):
@@ -65,12 +74,20 @@ class YamlLoader:
                 if substitution is None:
                     raise YamlUndefinedVariableError(path, found_var)
 
-                if s == f"{self._variable_substitutions[0]}{found_var}{self._variable_substitutions[1]}":
+                if (
+                    s
+                    == f"{self._variable_substitutions[0]}{found_var}{self._variable_substitutions[1]}"
+                ):
                     s = env.get(found_var)
                 else:
                     if type(substitution) in (list, dict):
-                        raise YamlIncorrectSubstitutionError(path, found_var, substitution)
-                    s = s.replace(f"{self._variable_substitutions[0]}{found_var}{self._variable_substitutions[1]}", str(substitution))
+                        raise YamlIncorrectSubstitutionError(
+                            path, found_var, substitution
+                        )
+                    s = s.replace(
+                        f"{self._variable_substitutions[0]}{found_var}{self._variable_substitutions[1]}",
+                        str(substitution),
+                    )
             return s
 
         return walk(process, loop)
@@ -146,6 +163,8 @@ def load_manifest(file_path: Path, loader: YamlLoader, env: dict) -> Tuple[str, 
         raise YamlInvalidFormatError(file_path, f"Required field `spec` not found")
 
     if manifest["kind"] not in ["event-type", "subscription"]:
-        raise YamlInvalidFormatError(file_path, f"Unknown manifest of kind '{manifest['kind']}'")
+        raise YamlInvalidFormatError(
+            file_path, f"Unknown manifest of kind '{manifest['kind']}'"
+        )
 
-    return manifest["kind"], manifest['spec']
+    return manifest["kind"], manifest["spec"]

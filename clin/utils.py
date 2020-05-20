@@ -33,7 +33,7 @@ def ensure_flat_list(val) -> list:
 
 
 def configure_logging(verbose: bool):
-    logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
+    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     logging.getLogger("requests").setLevel(logging.WARNING)
@@ -46,7 +46,9 @@ def pretty_yaml(val: dict, indentation: int = 0) -> str:
 
 
 def pretty_json(val: dict, indentation: int = 0) -> str:
-    raw = highlight(json.dumps(val, indent=2), JsonLexer(), TerminalTrueColorFormatter())
+    raw = highlight(
+        json.dumps(val, indent=2), JsonLexer(), TerminalTrueColorFormatter()
+    )
     return indent(raw, indentation)
 
 

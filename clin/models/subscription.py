@@ -30,9 +30,11 @@ class Subscription:
             owning_application=spec["owningApplication"],
             event_types=spec["eventTypes"],
             consumer_group=spec["consumerGroup"],
-            auth=Auth.from_spec(spec["auth"])
+            auth=Auth.from_spec(spec["auth"]),
         )
 
     @staticmethod
-    def components_string(event_types: List[str], owning_application: str, consumer_group: str):
+    def components_string(
+        event_types: List[str], owning_application: str, consumer_group: str
+    ):
         return f"event type(s): '{', '.join(event_types)}'; application: '{owning_application}'; consumer group: '{consumer_group}'"

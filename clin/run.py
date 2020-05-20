@@ -22,15 +22,43 @@ def cli():
     pass
 
 
-@cli.command('apply')
-@click.option('-e', '--env', required=True, type=str, help='Nakadi environment')
-@click.option('-t', '--token', required=False, type=str, help='Bearer token')
-@click.option('-X', '--execute', is_flag=True, default=False, help='Execute updates (default - false)')
-@click.option('-v', '--verbose', is_flag=True, default=False, help='Verbose output (default - false)')
-@click.option('-d', '--show-diff', is_flag=True, default=False, help='Show diff (default - false)')
-@click.option('-p', '--show-payload', is_flag=True, default=False, help='Show Nakadi payload (default - false)')
-@click.argument('file', type=click.Path(exists=True, dir_okay=False, readable=True))
-def apply(env: str, token: Optional[str], execute: bool, verbose: bool, show_diff: bool, show_payload: bool, file: str):
+@cli.command("apply")
+@click.option("-e", "--env", required=True, type=str, help="Nakadi environment")
+@click.option("-t", "--token", required=False, type=str, help="Bearer token")
+@click.option(
+    "-X",
+    "--execute",
+    is_flag=True,
+    default=False,
+    help="Execute updates (default - false)",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Verbose output (default - false)",
+)
+@click.option(
+    "-d", "--show-diff", is_flag=True, default=False, help="Show diff (default - false)"
+)
+@click.option(
+    "-p",
+    "--show-payload",
+    is_flag=True,
+    default=False,
+    help="Show Nakadi payload (default - false)",
+)
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, readable=True))
+def apply(
+    env: str,
+    token: Optional[str],
+    execute: bool,
+    verbose: bool,
+    show_diff: bool,
+    show_payload: bool,
+    file: str,
+):
     """Create or update Nakadi resource from single yaml manifest file\n
      Values to fill {{VARIABLES}} are taken from system environment"""
     configure_logging(verbose)
@@ -50,14 +78,35 @@ def apply(env: str, token: Optional[str], execute: bool, verbose: bool, show_dif
         exit(-1)
 
 
-@cli.command('process')
-@click.option('-t', '--token', required=False, type=str, help='Bearer token')
-@click.option('-X', '--execute', is_flag=True, default=False, help='Execute updates')
-@click.option('-v', '--verbose', is_flag=True, default=False, help='Verbose output (default - false)')
-@click.option('-d', '--show-diff', is_flag=True, default=False, help='Show diff (default - false)')
-@click.option('-p', '--show-payload', is_flag=True, default=False, help='Show Nakadi payload (default - false)')
-@click.argument('file', type=click.Path(exists=True, dir_okay=False, readable=True))
-def process(token: Optional[str], execute: bool, verbose: bool, show_diff: bool, show_payload: bool, file: str):
+@cli.command("process")
+@click.option("-t", "--token", required=False, type=str, help="Bearer token")
+@click.option("-X", "--execute", is_flag=True, default=False, help="Execute updates")
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Verbose output (default - false)",
+)
+@click.option(
+    "-d", "--show-diff", is_flag=True, default=False, help="Show diff (default - false)"
+)
+@click.option(
+    "-p",
+    "--show-payload",
+    is_flag=True,
+    default=False,
+    help="Show Nakadi payload (default - false)",
+)
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, readable=True))
+def process(
+    token: Optional[str],
+    execute: bool,
+    verbose: bool,
+    show_diff: bool,
+    show_payload: bool,
+    file: str,
+):
     """Create or update multiple Nakadi resources from clin file"""
     configure_logging(verbose)
 
@@ -71,7 +120,12 @@ def process(token: Optional[str], execute: bool, verbose: bool, show_diff: bool,
         subscriptions = [sub for sub in scope if sub.kind == "subscription"]
 
         for task in event_types + subscriptions:
-            logging.debug("[%s] applying file %s to %s environment", task.id, task.path, task.target)
+            logging.debug(
+                "[%s] applying file %s to %s environment",
+                task.id,
+                task.path,
+                task.target,
+            )
             processor.apply(task.target, task.kind, task.spec)
 
     except (ProcessingError, ConfigurationError, YamlError) as ex:
@@ -83,12 +137,24 @@ def process(token: Optional[str], execute: bool, verbose: bool, show_diff: bool,
         exit(-1)
 
 
-@cli.command('dump')
-@click.option('-e', '--env', required=True, type=str, help='Nakadi environment')
-@click.option('-t', '--token', required=False, type=str, help='Bearer token')
-@click.option('-o', '--output', default='yaml', type=click.Choice(['yaml', 'json']), help='Output format')
-@click.option('-v', '--verbose', is_flag=True, default=False, help='Verbose output (default - false)')
-@click.argument('event_type', type=str)
+@cli.command("dump")
+@click.option("-e", "--env", required=True, type=str, help="Nakadi environment")
+@click.option("-t", "--token", required=False, type=str, help="Bearer token")
+@click.option(
+    "-o",
+    "--output",
+    default="yaml",
+    type=click.Choice(["yaml", "json"]),
+    help="Output format",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Verbose output (default - false)",
+)
+@click.argument("event_type", type=str)
 def dump(env: str, token: Optional[str], output: str, verbose: bool, event_type: str):
     """Print manifest of existing Nakadi event type"""
     configure_logging(verbose)
@@ -105,9 +171,9 @@ def dump(env: str, token: Optional[str], output: str, verbose: bool, event_type:
             logging.error("Event type not found in Nakadi %s: %s", env, event_type)
             exit(-1)
 
-        if output.lower() == 'yaml':
+        if output.lower() == "yaml":
             logging.info(pretty_yaml(et.to_spec()))
-        elif output.lower() == 'json':
+        elif output.lower() == "json":
             logging.info(pretty_json(et.to_spec()))
         else:
             logging.error("Invalid output format: %s", output)
@@ -122,5 +188,5 @@ def dump(env: str, token: Optional[str], output: str, verbose: bool, event_type:
         exit(-1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()

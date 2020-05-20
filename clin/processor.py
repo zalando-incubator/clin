@@ -7,7 +7,12 @@ from deepdiff import DeepDiff
 from clin.config import AppConfig
 from clin.models.event_type import EventType
 from clin.models.subscription import Subscription
-from clin.nakadi import Nakadi, NakadiError, event_type_to_payload, subscription_to_payload
+from clin.nakadi import (
+    Nakadi,
+    NakadiError,
+    event_type_to_payload,
+    subscription_to_payload,
+)
 from clin.utils import pretty_yaml, pretty_json
 
 MODIFY_COLOR = Fore.MAGENTA
@@ -16,8 +21,14 @@ OUTPUT_INDENTATION = 4
 
 
 class Processor:
-    def __init__(self, config: AppConfig, token: Optional[str],
-                 execute: bool = False, show_diff: bool = False, show_payload: bool = False):
+    def __init__(
+        self,
+        config: AppConfig,
+        token: Optional[str],
+        execute: bool = False,
+        show_diff: bool = False,
+        show_payload: bool = False,
+    ):
         self.nakadi = {
             env: Nakadi(conf.nakadi_url, token)
             for env, conf in config.environments.items()
@@ -66,7 +77,9 @@ class Processor:
         sub = Subscription.from_spec(spec)
 
         try:
-            current = nakadi.get_subscription(sub.event_types, sub.owning_application, sub.consumer_group)
+            current = nakadi.get_subscription(
+                sub.event_types, sub.owning_application, sub.consumer_group
+            )
             if current:
                 logging.debug("Found existing %s", current)
                 sub.id = current.id
@@ -95,8 +108,12 @@ class Processor:
 
     def _maybe_print_diff(self, entity: Union[EventType, Subscription], diff: DeepDiff):
         if self.show_diff:
-            logging.info(f"{MODIFY_COLOR}⦿ Found %d changes:{Fore.RESET} %s\n%s",
-                         len(diff), entity, pretty_yaml(diff.to_dict(), indentation=OUTPUT_INDENTATION))
+            logging.info(
+                f"{MODIFY_COLOR}⦿ Found %d changes:{Fore.RESET} %s\n%s",
+                len(diff),
+                entity,
+                pretty_yaml(diff.to_dict(), indentation=OUTPUT_INDENTATION),
+            )
 
     def _maybe_print_payload(self, entity: Union[EventType, Subscription]):
         if self.show_payload:
@@ -108,8 +125,11 @@ class Processor:
                 logging.warning("Failed to print payload for %s", entity)
                 return
 
-            logging.info(f"{MODIFY_COLOR}⦿ Nakadi payload:{Fore.RESET} %s\n%s",
-                         entity, pretty_json(payload, indentation=OUTPUT_INDENTATION))
+            logging.info(
+                f"{MODIFY_COLOR}⦿ Nakadi payload:{Fore.RESET} %s\n%s",
+                entity,
+                pretty_json(payload, indentation=OUTPUT_INDENTATION),
+            )
 
     def _update_event_type(self, nakadi, et):
         if self.execute:

@@ -21,12 +21,22 @@ class Auth:
     any_token_write: bool
 
     @staticmethod
-    def from_spec(spec: Dict[str, Dict[str, Optional[List[Union[str, List[str]]]]]]) -> Auth:
+    def from_spec(
+        spec: Dict[str, Dict[str, Optional[List[Union[str, List[str]]]]]]
+    ) -> Auth:
         def users(role: str) -> List[str]:
-            return list(set(ensure_flat_list(spec["users"].get(role)))) if spec["users"] else []
+            return (
+                list(set(ensure_flat_list(spec["users"].get(role))))
+                if spec["users"]
+                else []
+            )
 
         def services(role: str) -> List[str]:
-            return list(set(ensure_flat_list(spec["services"].get(role)))) if spec["services"] else []
+            return (
+                list(set(ensure_flat_list(spec["services"].get(role))))
+                if spec["services"]
+                else []
+            )
 
         return Auth(
             users=AllowedTenants(
@@ -40,7 +50,7 @@ class Auth:
                 readers=services("readers"),
             ),
             any_token_read=spec["anyToken"].get("read", False),
-            any_token_write=spec["anyToken"].get("write", False)
+            any_token_write=spec["anyToken"].get("write", False),
         )
 
     def to_spec(self) -> dict:
@@ -55,8 +65,5 @@ class Auth:
                 "readers": self.services.readers,
                 "writers": self.services.writers,
             },
-            "anyToken": {
-                "read": self.any_token_read,
-                "write": self.any_token_write,
-            }
+            "anyToken": {"read": self.any_token_read, "write": self.any_token_write,},
         }

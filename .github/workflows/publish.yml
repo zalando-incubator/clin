@@ -31,6 +31,9 @@ jobs:
       run: |
         poetry version ${GITHUB_REF##*/}
         sed -i "s/'1.0.dev0'/'${GITHUB_REF##*/}'/g" clin/__init__.py
+    - name: Run linter
+      run: |
+        poetry run black clin --check
     - name: Run tests
       run: |
         poetry run pytest

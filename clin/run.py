@@ -19,6 +19,8 @@ DEFAULT_YAML_LOADER = YamlLoader()
 @click.group()
 def cli():
     """Manage Nakadi resources"""
+
+
     pass
 
 

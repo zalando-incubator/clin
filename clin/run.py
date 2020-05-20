@@ -20,7 +20,6 @@ DEFAULT_YAML_LOADER = YamlLoader()
 def cli():
     """Manage Nakadi resources"""
 
-
     pass
 
 

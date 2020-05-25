@@ -1,7 +1,7 @@
 # Clin
 
 **Clin** is a command-line utility to manage [Nakadi](https://nakadi.io/)
-resources from schema files in "Infrastructure-as-a-Code" style.
+resources from schema files in "Infrastructure as Code" style.
 ![](https://github.com/zalando-incubator/clin/raw/master/docs/gifs/demo.gif)
 
 ## User Guide
@@ -11,7 +11,7 @@ resources from schema files in "Infrastructure-as-a-Code" style.
 * [Python](https://www.python.org/) >= 3.7
 
 ### Installing
-You can install **clin** direcly from [PyPI](https://pypi.org/project/clin/)
+You can install **clin** directly from [PyPI](https://pypi.org/project/clin/)
 using pip:
 
 ```bash

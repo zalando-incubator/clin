@@ -11,26 +11,25 @@
 - [Dumping](#dumping)
 
 ## Core concepts
-**clin** sends http requests to Nakadi to create or update resources. The source
-of data for this is yaml manifest file which corresponds to a single Nakadi
+**clin** sends HTTP requests to Nakadi to create or update resources. The source
+of data for this is a YAML manifest file which corresponds to a single Nakadi
 resource.
 
 These manifests can be applied:
 - directly one by one, see
-  [Applying single manifest](#applying-single-manifest).
+  [Applying a single manifest](#applying-single-manifest).
 - in batch by using a "clin file" to roll out whole infrastructure with a single
   command, see [Batch processing](#batch-processing).
 
 `{{TEMPLATE_VARIABLES}}` and `@@@./includes.yaml` , optionally enforced by
-[yaml anchors](https://www.google.com/search?q=yaml+anchors) enable expressive
+[YAML anchors](https://www.google.com/search?q=yaml+anchors) enable expressive
 and DRY definition of the Nakadi infrastructure.
 
 For more details see [Manifests format](#manifests-format).
 
 ### Dry-run by default
-Each command that can possibly change Nakadi resources in NOT performing any
-changes by default. To apply actual changes, additional key `-X` or `--execute`
-should be specified:
+Commands do NOT apply any changes by default. To apply the changes, 
+pass the -X or --execute flag to the command:
 ```bash
 ~ clin apply --env staging event-type.yaml
 Will create event type 'derokhin.clin.test'
@@ -45,8 +44,8 @@ Clin would not touch something that is not changed:
 ~ clin apply --env staging event-type.yaml
 Up to date: event type 'derokhin.clin.test'
 ```
-With dry run and [batch processing](#batch-processing) this can be used to see
-if actual state is differs from the set of manifests in your codebase
+With dry run and [batch processing](#batch-processing), this can be used to see
+if the actual state differs from the set of manifests in your codebase
 
 ### OAuth support
 Clin supports authorization for all operations using OAuth. To enable OAuth,
@@ -62,10 +61,10 @@ Clin supports multiple environments that have to be configured and specified on
 every command.
 
 ## Configuration
-Clin uses configuration using a yaml file located either in the command's
+Clin uses configuration from a YAML file located either in the command's
 working dir (usually the project root) or in the user's home directory.
 The configuration file in the working dir takes precedence, but note that the
-configuration is **not** hierarchical, i.e. a configuration file will completly
+configuration is **not** hierarchical, i.e. a configuration file will completely
 override/replace another.
 
 ```yaml
@@ -90,12 +89,11 @@ Kind defines the type of Nakadi resource. Currently supported:
 properties.
 
 ### Template variables
-Manifest yaml can include template variables in double curly braces (`{{VAR}}`)
+The manifest YAML can include template variables in double curly braces (`{{VAR}}`)
 which will be substituted from the external context.
 
-In case of [applying single manifest](#applying-single-manifest)) this context
-is taken from
-environment variables of your shell. I.e.:
+In the case of [applying single manifest](#applying-single-manifest)) this context
+is taken from the environment variables of your shell. I.e.:
 ```yaml
 #...
   auth:
@@ -108,9 +106,9 @@ when applying it in bash, the current user will be the admin of the event type
 or subscription.
 
 
-In case of batch processing (see [Batch processing](#batch-processing)), context
+In case of batch processing (see [Batch processing](#batch-processing)), the context
 is defined for each of the processes in the env section. For instance, given one
-of manifests in `./apply` folder:
+of the manifests in `./apply` folder:
 ```yaml
 kind: event-type
 spec:
@@ -135,7 +133,7 @@ process:
 ```
 
 Variables can be either scalar types and then they can be substituted everywhere
-(like in the example above, `POSTFIX` included into the string. Or they can be
+(like in the example above, `POSTFIX` included in the string. Or they can be
 compound types (objects or array) and they can be included only entirely:
 
 ```yaml
@@ -160,11 +158,11 @@ process:
 #...
 ```
 
-If a variable, found in manifest is not defined in the context – the process
+If a variable found in the manifest is not defined in the context, the process
 will be interrupted.
 
 ### Includes
-Manifest can include other yaml file
+The manifest can include other YAML files
 
 ```yaml
 #...
@@ -177,11 +175,11 @@ content of `schema.yaml` will be included as a value of field `jsonSchema`.
 
 There are no limitations on the depth of inclusion, i.e. `schema.yaml` itself
 can contain includes of some parts from other files. Cyclic references are not
-permitted
+permitted.
 
-First includes resolved and then variables are processed, which means:
-- included files can contain variables which will be processed from same context
-- include reference can NOT contain variable, following is invalid:
+First includes are resolved and then variables are processed, which means:
+- included files can contain variables which will be processed from the same context
+- an include reference can NOT contain any variables. The following is invalid:
   ```yaml
     jsonSchema: @@@./{{CLIENT}}/schema.yaml
   ```
@@ -192,7 +190,7 @@ Your shell environment variables will be used as a context to resolve template
 variables. Natural limitation here – variables can be only strings.
 
 ## Batch processing
-To apply multiple Nakadi resources, a clin file is needed (please find full
+To apply multiple Nakadi resources, a clin file is needed (please find a full
 example in [/docs/examples/batch](/docs/examples/batch)). This file defines a
 list of processes to be executed.
 ```yaml
@@ -206,13 +204,13 @@ process:
 ```
 
 Where:
-- `id` - just a name, string with no additional constraints
+- `id` - just a name, string with no additional constraints.
 - `target` - the environment this step is executed against. The environment must
   be present in the [configuration](#configuration) file.
-- `paths` - array of paths to be processed. Each path will be scanned (non
-  recursively) for yaml files (`*.yaml` or `*.yml`). Each found yaml file is
+- `paths` - an array of paths to be processed. Each path will be scanned (non
+  recursively) for YAML files (`*.yaml` or `*.yml`). Each found YAML file is
   considered to be a resource manifest.
-- `env` - object with key-value pairs used for processing template variables in
+- `env` - an object with key-value pairs used for processing template variables in
   the discovered manifests.
 
 Include logic applies while processing the clin file (with one

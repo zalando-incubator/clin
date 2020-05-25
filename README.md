@@ -2,7 +2,7 @@
 
 **Clin** is a command-line utility to manage [Nakadi](https://nakadi.io/)
 resources from schema files in "Infrastructure-as-a-Code" style.
-![](/docs/gifs/demo.gif)
+![](https://github.com/zalando-incubator/clin/raw/master/docs/gifs/demo.gif)
 
 ## User Guide
 
@@ -20,20 +20,21 @@ pip install clin
 
 ### Getting started
 
-After this you should be able to run tool:
+After this you should be able to run the `clin` tool:
 ```bash
 ~ clin --help
 Usage: clin [OPTIONS] COMMAND [ARGS]...
 ...
 ```
 
-Please refer [documentation](/docs) and [examples](/docs/examples)
+Please refer to the [documentation](https://github.com/zalando-incubator/clin/tree/master/docs)
+and [examples](https://github.com/zalando-incubator/clin/tree/master/docs/examples).
 
 ## Contributing
 
-Please read [CONTRIBUTING](CONTRIBUTING.md) for details on our process for
-submitting pull requests to us, and please ensure you follow the
-[CODE_OF_CONDUCT](CODE_OF_CONDUCT.md).
+Please read [CONTRIBUTING](https://github.com/zalando-incubator/clin/blob/master/CONTRIBUTING.md)
+for details on our process for submitting pull requests to us, and please ensure
+you follow the [CODE_OF_CONDUCT](https://github.com/zalando-incubator/clin/blob/master/CODE_OF_CONDUCT.md).
 
 ### Prerequisites
 
@@ -62,7 +63,7 @@ poetry run pytest
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available,
+We use [SemVer](http://semver.org) for versioning. For the versions available,
 see the [tags on this repository](https://github.com/zalando-incubator/clin/tags).
 
 ## Authors
@@ -70,10 +71,11 @@ see the [tags on this repository](https://github.com/zalando-incubator/clin/tags
 * **Dmitry Erokhin** [@Dmitry-Erokhin](https://github.com/Dmitry-Erokhin)
 * **Daniel Stockhammer** [@dstockhammer](https://github.com/dstockhammer)
 
-See also the list of [contributors](CONTRIBUTORS.md) who participated in this
-project.
+See also the list of [contributors](Chttps://github.com/zalando-incubator/clin/blob/master/ONTRIBUTORS.md)
+who participated in this project.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE)
-file for details.
+This project is licensed under the MIT License. See the
+[LICENSE](https://github.com/zalando-incubator/clin/blob/master/LICENSE) file
+for details.

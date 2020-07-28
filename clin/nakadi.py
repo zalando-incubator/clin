@@ -187,11 +187,6 @@ def event_type_to_payload(event_type: EventType) -> dict:
     enrichment_strategies = (
         [] if event_type.category == Category.UNDEFINED else ["metadata_enrichment"]
     )
-    options = (
-        {}
-        if event_type.cleanup.policy == Cleanup.Policy.COMPACT
-        else {"retention_time": event_type.cleanup.retention_time_days * MS_IN_DAY}
-    )
     return {
         "name": event_type.name,
         "owning_application": event_type.owning_application,
@@ -206,7 +201,9 @@ def event_type_to_payload(event_type: EventType) -> dict:
             "write_parallelism": event_type.partitioning.partition_count,
         },
         "cleanup_policy": event_type.cleanup.policy,
-        "options": options,
+        "options": {
+            "retention_time": event_type.cleanup.retention_time_days * MS_IN_DAY
+        },
         "compatibility_mode": event_type.schema.compatibility,
         "schema": {
             "type": "json_schema",

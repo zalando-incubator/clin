@@ -58,7 +58,7 @@ class Cleanup:
             return str(self.value)
 
     policy: Policy
-    retention_time_days: Optional[int]
+    retention_time_days: int
 
 
 @dataclass

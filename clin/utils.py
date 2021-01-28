@@ -4,8 +4,10 @@ import sys
 
 import yaml
 from pygments import highlight
+from pygments.formatter import Formatter
+from pygments.formatters.other import NullFormatter
 from pygments.formatters.terminal256 import TerminalTrueColorFormatter
-from pygments.lexers.data import YamlLexer, JsonLexer
+from pygments.lexers.data import JsonLexer, YamlLexer
 
 MS_IN_DAY = 24 * 60 * 60 * 1000
 
@@ -41,17 +43,19 @@ def configure_logging(verbose: bool):
 
 
 def pretty_yaml(val: dict, indentation: int = 0) -> str:
-    raw = highlight(yaml.dump(val), YamlLexer(), TerminalTrueColorFormatter()).strip()
+    raw = highlight(yaml.dump(val), YamlLexer(), getFormatter()).strip()
     return indent(raw, indentation)
 
 
 def pretty_json(val: dict, indentation: int = 0) -> str:
-    raw = highlight(
-        json.dumps(val, indent=2), JsonLexer(), TerminalTrueColorFormatter()
-    )
+    raw = highlight(json.dumps(val, indent=2), JsonLexer(), getFormatter())
     return indent(raw, indentation)
 
 
 def indent(s: str, indentation: int) -> str:
     prepend = " " * indentation
     return "\n".join(prepend + l for l in s.splitlines())
+
+
+def getFormatter() -> Formatter:
+    return TerminalTrueColorFormatter() if sys.stdout.isatty() else NullFormatter()

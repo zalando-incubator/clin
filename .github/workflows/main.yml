@@ -1,28 +1,68 @@
-name: Build and test
+name: Build, lint, test, package and publish
 
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  release:
+    types: [ published ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [ 3.7, 3.8, 3.9 ]
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install poetry
-        uses: abatilo/actions-poetry@v2.1.0
-      - name: Install dependencies
-        run: poetry install
-      - name: Run linter
-        run: poetry run black clin --check
-      - name: Run tests
-        run: poetry run pytest
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CONTAINER_REGISTRY_TOKEN }}
+
+      - name: Determine version
+        id: get_version
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            echo "::set-output name=version::${GITHUB_REF##*/}"
+          else
+            echo "::set-output name=version::0.dev${GITHUB_RUN_ID}"
+          fi
+
+      - name: lint, test, build, package
+        run: |
+          docker build . \
+            --tag ${{ github.repository }}/build:latest
+            --build-arg python_version=${{ matrix.python-version }} \
+            --build-arg clin_version=${{ steps.get_version.outputs.version }} \
+            --label org.opencontainers.image.version=${{ steps.get_version.outputs.version  }} \
+            --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --label org.opencontainers.image.ref.name=${{ github.ref }} \
+            --target build
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release' && matrix.python-version == '3.7'
+        run: |
+          docker run --rm clin-build publish \
+            -e POETRY_PYPI_TOKEN_PYPI=${{ secrets.PYPI_TOKEN }}
+
+      - name: Build and push CLI Docker image
+        if: matrix.python-version == '3.9'
+        run: |
+          docker build . \
+            --tag ghcr.io/${{ github.repository }}/cli:latest
+            --tag ghcr.io/${{ github.repository }}/cli:${{ steps.get_version.outputs.version }}
+            --build-arg python_version=${{ matrix.python-version }} \
+            --build-arg clin_version=${{ steps.get_version.outputs.version }} \
+            --label org.opencontainers.image.version=${{ steps.get_version.outputs.version  }} \
+            --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --label org.opencontainers.image.ref.name=${{ github.ref }} "s/\"1.0.dev0\"/\"${GITHUB_REF##*/}\"/g"
+            --target cli
+
+          docker push --all-tags ghcr.io/${{ github.repository }}/cli

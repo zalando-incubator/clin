@@ -32,11 +32,10 @@ jobs:
           else
             version="0.dev${{ github.run_id }}"
           fi
-
           echo "Setting version to $version"
           echo "::set-output name=version::$version"
 
-      - name: lint, test, build, package
+      - name: Lint, build, test, package
         run: |
           docker build . \
             --tag ${{ github.repository }}/build:latest \
@@ -51,8 +50,8 @@ jobs:
       - name: Publish to PyPI
         if: github.event_name == 'release' && matrix.python-version == '3.7'
         run: |
-          docker run --rm clin-build publish \
-            -e POETRY_PYPI_TOKEN_PYPI=${{ secrets.PYPI_TOKEN }}
+          docker run --rm ${{ github.repository }}/build:latest publish \
+            --env POETRY_PYPI_TOKEN_PYPI=${{ secrets.PYPI_TOKEN }}
 
       - name: Build and push CLI Docker image
         if: matrix.python-version == '3.9'
@@ -67,5 +66,4 @@ jobs:
             --label org.opencontainers.image.revision=${{ github.sha }} \
             --label org.opencontainers.image.ref.name=${{ github.ref }} \
             --target cli
-
           docker push --all-tags ghcr.io/${{ github.repository }}/cli

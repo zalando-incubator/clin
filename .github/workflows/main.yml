@@ -65,7 +65,7 @@ jobs:
             --label org.opencontainers.image.version=${{ steps.get_version.outputs.version  }} \
             --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
             --label org.opencontainers.image.revision=${{ github.sha }} \
-            --label org.opencontainers.image.ref.name=${{ github.ref }} "s/\"1.0.dev0\"/\"${GITHUB_REF##*/}\"/g"
+            --label org.opencontainers.image.ref.name=${{ github.ref }} \
             --target cli
 
           docker push --all-tags ghcr.io/${{ github.repository }}/cli

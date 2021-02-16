@@ -30,10 +30,10 @@ jobs:
           echo "GITHUB_EVENT_NAME $GITHUB_EVENT_NAME"
           echo "github.event_name ${{ github.event_name }}"
 
-          echo "ref ${{ github.ref }} ${{ github.ref##*/ }}"
+          echo "ref ${{ github.ref }} ${GITHUB_REF} ${GITHUB_REF/refs\/tags\//}"
 
           if [ "${{ github.event_name }}" == "release" ]; then
-            echo "::set-output name=version::${GITHUB_REF##*/}"
+            echo "::set-output name=version::${GITHUB_REF/refs\/tags\//}"
           else
             echo "::set-output name=version::0.dev${{ github.run_id }}"
           fi

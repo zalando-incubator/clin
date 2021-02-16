@@ -27,10 +27,15 @@ jobs:
       - name: Determine version
         id: get_version
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+          echo "GITHUB_EVENT_NAME $GITHUB_EVENT_NAME"
+          echo "github.event_name ${{ github.event_name }}"
+
+          echo "ref ${{ github.ref }} ${{ github.ref##*/ }}"
+
+          if [ "${{ github.event_name }}" == "release" ]; then
             echo "::set-output name=version::${GITHUB_REF##*/}"
           else
-            echo "::set-output name=version::0.dev${GITHUB_RUN_ID}"
+            echo "::set-output name=version::0.dev${{ github.run_id }}"
           fi
 
       - name: lint, test, build, package

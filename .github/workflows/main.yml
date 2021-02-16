@@ -27,21 +27,19 @@ jobs:
       - name: Determine version
         id: get_version
         run: |
-          echo "GITHUB_EVENT_NAME $GITHUB_EVENT_NAME"
-          echo "github.event_name ${{ github.event_name }}"
-
-          echo "ref ${{ github.ref }} ${GITHUB_REF} ${GITHUB_REF/refs\/tags\//}"
-
           if [ "${{ github.event_name }}" == "release" ]; then
-            echo "::set-output name=version::${GITHUB_REF/refs\/tags\//}"
+            version="${GITHUB_REF##*/}"
           else
-            echo "::set-output name=version::0.dev${{ github.run_id }}"
+            version="0.dev${{ github.run_id }}"
           fi
+
+          echo "Setting version to $version"
+          echo "::set-output name=version::$version"
 
       - name: lint, test, build, package
         run: |
           docker build . \
-            --tag ${{ github.repository }}/build:latest
+            --tag ${{ github.repository }}/build:latest \
             --build-arg python_version=${{ matrix.python-version }} \
             --build-arg clin_version=${{ steps.get_version.outputs.version }} \
             --label org.opencontainers.image.version=${{ steps.get_version.outputs.version  }} \
@@ -60,8 +58,8 @@ jobs:
         if: matrix.python-version == '3.9'
         run: |
           docker build . \
-            --tag ghcr.io/${{ github.repository }}/cli:latest
-            --tag ghcr.io/${{ github.repository }}/cli:${{ steps.get_version.outputs.version }}
+            --tag ghcr.io/${{ github.repository }}/cli:latest \
+            --tag ghcr.io/${{ github.repository }}/cli:${{ steps.get_version.outputs.version }} \
             --build-arg python_version=${{ matrix.python-version }} \
             --build-arg clin_version=${{ steps.get_version.outputs.version }} \
             --label org.opencontainers.image.version=${{ steps.get_version.outputs.version  }} \

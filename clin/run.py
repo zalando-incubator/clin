@@ -2,10 +2,11 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Tuple
 
 import click
 
+from clin import __version__
 from clin.clinfile import calculate_scope
 from clin.config import ConfigurationError, load_config
 from clin.nakadi import Nakadi, NakadiError
@@ -17,21 +18,19 @@ DEFAULT_YAML_LOADER = YamlLoader()
 
 
 @click.group()
+@click.version_option(version=__version__)
 def cli():
     """Manage Nakadi resources"""
-
     pass
 
 
 @cli.command("apply")
-@click.option("-e", "--env", required=True, type=str, help="Nakadi environment")
-@click.option("-t", "--token", required=False, type=str, help="Bearer token")
 @click.option(
-    "-X",
-    "--execute",
-    is_flag=True,
-    default=False,
-    help="Execute updates (default - false)",
+    "-t",
+    "--token",
+    required=False,
+    type=str,
+    help="The bearer token to authenticate the Nakadi requests",
 )
 @click.option(
     "-v",
@@ -41,7 +40,25 @@ def cli():
     help="Verbose output (default - false)",
 )
 @click.option(
-    "-d", "--show-diff", is_flag=True, default=False, help="Show diff (default - false)"
+    "-e",
+    "--env",
+    required=True,
+    type=str,
+    help="The Nakadi environment to target",
+)
+@click.option(
+    "-X",
+    "--execute",
+    is_flag=True,
+    default=False,
+    help="Execute updates (default - false)",
+)
+@click.option(
+    "-d",
+    "--show-diff",
+    is_flag=True,
+    default=False,
+    help="Display the schema diff (default - false)",
 )
 @click.option(
     "-p",
@@ -52,10 +69,10 @@ def cli():
 )
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, readable=True))
 def apply(
-    env: str,
-    token: Optional[str],
-    execute: bool,
+    token: str,
     verbose: bool,
+    env: str,
+    execute: bool,
     show_diff: bool,
     show_payload: bool,
     file: str,
@@ -80,8 +97,13 @@ def apply(
 
 
 @cli.command("process")
-@click.option("-t", "--token", required=False, type=str, help="Bearer token")
-@click.option("-X", "--execute", is_flag=True, default=False, help="Execute updates")
+@click.option(
+    "-t",
+    "--token",
+    required=False,
+    type=str,
+    help="The bearer token to authenticate the Nakadi requests",
+)
 @click.option(
     "-v",
     "--verbose",
@@ -90,7 +112,25 @@ def apply(
     help="Verbose output (default - false)",
 )
 @click.option(
-    "-d", "--show-diff", is_flag=True, default=False, help="Show diff (default - false)"
+    "-X",
+    "--execute",
+    is_flag=True,
+    default=False,
+    help="Execute the updates (default - false)",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Verbose output (default - false)",
+)
+@click.option(
+    "-d",
+    "--show-diff",
+    is_flag=True,
+    default=False,
+    help="Display the schema diff (default - false)",
 )
 @click.option(
     "-p",
@@ -99,16 +139,34 @@ def apply(
     default=False,
     help="Show Nakadi payload (default - false)",
 )
+@click.option(
+    "-i",
+    "--id",
+    required=False,
+    type=str,
+    multiple=True,
+    help="Select one or multiple steps to process by their id",
+)
+@click.option(
+    "-e",
+    "--env",
+    required=False,
+    type=str,
+    multiple=True,
+    help="Select one or multiple steps to process by mathing the target environment",
+)
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, readable=True))
 def process(
-    token: Optional[str],
-    execute: bool,
+    token: str,
     verbose: bool,
+    execute: bool,
     show_diff: bool,
     show_payload: bool,
+    id: Tuple[str],
+    env: Tuple[str],
     file: str,
 ):
-    """Create or update multiple Nakadi resources from clin file"""
+    """Create or update multiple Nakadi resources from a clin file"""
     configure_logging(verbose)
 
     try:
@@ -116,7 +174,7 @@ def process(
         processor = Processor(config, token, execute, show_diff, show_payload)
         file_path: Path = Path(file)
         master = load_yaml(file_path, DEFAULT_YAML_LOADER, os.environ)
-        scope = calculate_scope(master, file_path.parent, DEFAULT_YAML_LOADER)
+        scope = calculate_scope(master, file_path.parent, DEFAULT_YAML_LOADER, id, env)
         event_types = [et for et in scope if et.kind == "event-type"]
         subscriptions = [sub for sub in scope if sub.kind == "subscription"]
 
@@ -139,14 +197,12 @@ def process(
 
 
 @cli.command("dump")
-@click.option("-e", "--env", required=True, type=str, help="Nakadi environment")
-@click.option("-t", "--token", required=False, type=str, help="Bearer token")
 @click.option(
-    "-o",
-    "--output",
-    default="yaml",
-    type=click.Choice(["yaml", "json"]),
-    help="Output format",
+    "-t",
+    "--token",
+    required=False,
+    type=str,
+    help="The bearer token to authenticate the Nakadi requests",
 )
 @click.option(
     "-v",
@@ -155,9 +211,23 @@ def process(
     default=False,
     help="Verbose output (default - false)",
 )
+@click.option(
+    "-e",
+    "--env",
+    required=True,
+    type=str,
+    help="The Nakadi environment to target",
+)
+@click.option(
+    "-o",
+    "--output",
+    default="yaml",
+    type=click.Choice(["yaml", "json"]),
+    help="The output format (default - yaml)",
+)
 @click.argument("event_type", type=str)
-def dump(env: str, token: Optional[str], output: str, verbose: bool, event_type: str):
-    """Print manifest of existing Nakadi event type"""
+def dump(token: str, verbose: bool, env: str, output: str, event_type: str):
+    """Print the manifest of an existing Nakadi event type"""
     configure_logging(verbose)
 
     try:

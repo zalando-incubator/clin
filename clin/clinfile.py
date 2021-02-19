@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from clin.yamlops import YamlLoader
 
@@ -16,17 +16,26 @@ class Process:
     target: str
 
 
-def calculate_scope(master: dict, base_path: Path, loader: YamlLoader) -> List[Process]:
+def calculate_scope(
+    master: dict,
+    base_path: Path,
+    loader: YamlLoader,
+    filter_id: Tuple[str],
+    filter_env: Tuple[str],
+) -> List[Process]:
     processes = master.get("process")
     if not processes:
         raise Exception("'process' section is not found")
 
     scope = []
     for proc in processes:
-        proc_id = proc["id"]
-        proc_paths = proc["paths"]
+        if len(filter_id) > 0 and proc["id"] not in filter_id:
+            continue
+        if len(filter_env) > 0 and proc["target"] not in filter_env:
+            continue
 
-        sources = [base_path.joinpath(s).resolve(strict=False) for s in proc_paths]
+        proc_id = proc["id"]
+        sources = [base_path.joinpath(s).resolve(strict=False) for s in proc["paths"]]
         manifests_files = []
         for source in sources:
             if not source.exists():

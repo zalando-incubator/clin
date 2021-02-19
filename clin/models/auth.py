@@ -65,5 +65,8 @@ class Auth:
                 "readers": self.services.readers,
                 "writers": self.services.writers,
             },
-            "anyToken": {"read": self.any_token_read, "write": self.any_token_write,},
+            "anyToken": {
+                "read": self.any_token_read,
+                "write": self.any_token_write,
+            },
         }

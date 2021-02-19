@@ -128,7 +128,10 @@ class YamlUndefinedVariableError(YamlError):
         self._variable = variable
 
     def __str__(self):
-        return f"Variable {self._variable} (in {self.file}) is not defined (i.e. `VAR: `), explicit value required (i.e. `VAR: []`)"
+        return (
+            f"Variable {self._variable} (in {self.file}) is not defined (i.e. `VAR: `),"
+            f" explicit value required (i.e. `VAR: []`)"
+        )
 
 
 class YamlIncorrectSubstitutionError(YamlError):

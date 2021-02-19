@@ -23,17 +23,17 @@ keywords = [ "Nakadi" ]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-requests = "^2.23.0"
-pyyaml = "^5.3.1"
-click = "^7.1.1"
-deepdiff = "^4.3.2"
-pygments = "^2.6.1"
-colorama = "^0.4.3"
+requests = "^2.23"
+pyyaml = "^5.4"
+click = "^7.1"
+deepdiff = "^5.2"
+pygments = "^2.6"
+colorama = "^0.4"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.4.1"
+pytest = "^6.2"
 toml = "^0.10.0"
-black = "^19.10b0"
+black = "^20.8b1"
 
 [tool.poetry.scripts]
 clin = "clin.run:cli"

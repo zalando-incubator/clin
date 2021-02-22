@@ -48,13 +48,15 @@ def calculate_scope(master: dict, base_path: Path, loader: YamlLoader) -> List[P
             kind = yml.get("kind")
             if not kind:
                 raise Exception(
-                    f"Manifest file '{manifest_file}' for process '{proc_id}' is malformed, required field `kind` is not found"
+                    f"Manifest file '{manifest_file}' for process '{proc_id}'"
+                    f" is malformed, required field `kind` is not found"
                 )
 
             spec = yml.get("spec")
             if not spec:
                 raise Exception(
-                    f"Manifest file '{manifest_file}' for process '{proc_id}' is malformed, required field `spec` is not found"
+                    f"Manifest file '{manifest_file}' for process '{proc_id}'"
+                    f" is malformed, required field `spec` is not found"
                 )
 
             scope.append(

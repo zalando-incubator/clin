@@ -61,7 +61,7 @@ def apply(
     file: str,
 ):
     """Create or update Nakadi resource from single yaml manifest file\n
-     Values to fill {{VARIABLES}} are taken from system environment"""
+    Values to fill {{VARIABLES}} are taken from system environment"""
     configure_logging(verbose)
 
     try:

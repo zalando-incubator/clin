@@ -153,7 +153,7 @@ def apply(
     required=False,
     type=str,
     multiple=True,
-    help="Select one or multiple steps to process by mathing the target environment",
+    help="Select one or multiple steps to process by matching the target environment",
 )
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, readable=True))
 def process(

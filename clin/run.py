@@ -2,7 +2,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
 import click
 
@@ -69,7 +69,7 @@ def cli():
 )
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, readable=True))
 def apply(
-    token: str,
+    token: Optional[str],
     verbose: bool,
     env: str,
     execute: bool,
@@ -119,13 +119,6 @@ def apply(
     help="Execute the updates (default - false)",
 )
 @click.option(
-    "-v",
-    "--verbose",
-    is_flag=True,
-    default=False,
-    help="Verbose output (default - false)",
-)
-@click.option(
     "-d",
     "--show-diff",
     is_flag=True,
@@ -157,7 +150,7 @@ def apply(
 )
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, readable=True))
 def process(
-    token: str,
+    token: Optional[str],
     verbose: bool,
     execute: bool,
     show_diff: bool,
@@ -212,6 +205,12 @@ def process(
     help="Verbose output (default - false)",
 )
 @click.option(
+    "--include-envelope",
+    is_flag=True,
+    default=False,
+    help="Add clin envelope to schema (default - false)",
+)
+@click.option(
     "-e",
     "--env",
     required=True,
@@ -226,8 +225,15 @@ def process(
     help="The output format (default - yaml)",
 )
 @click.argument("event_type", type=str)
-def dump(token: str, verbose: bool, env: str, output: str, event_type: str):
-    """Print the manifest of an existing Nakadi event type"""
+def dump(
+    token: Optional[str],
+    verbose: bool,
+    env: str,
+    output: str,
+    include_envelope: bool,
+    event_type: str,
+):
+    """Print manifest of existing Nakadi event type"""
     configure_logging(verbose)
 
     try:
@@ -242,10 +248,19 @@ def dump(token: str, verbose: bool, env: str, output: str, event_type: str):
             logging.error("Event type not found in Nakadi %s: %s", env, event_type)
             exit(-1)
 
+        et_output = (
+            et.to_spec()
+            if not include_envelope
+            else {
+                "kind": "event-type",
+                "spec": et.to_spec(),
+            }
+        )
+
         if output.lower() == "yaml":
-            logging.info(pretty_yaml(et.to_spec()))
+            logging.info(pretty_yaml(et_output))
         elif output.lower() == "json":
-            logging.info(pretty_json(et.to_spec()))
+            logging.info(pretty_json(et_output))
         else:
             logging.error("Invalid output format: %s", output)
             exit(-1)

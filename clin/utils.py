@@ -43,19 +43,23 @@ def configure_logging(verbose: bool):
 
 
 def pretty_yaml(val: dict, indentation: int = 0) -> str:
-    raw = highlight(yaml.dump(val), YamlLexer(), getFormatter()).strip()
-    return indent(raw, indentation)
+    raw = highlight(
+        yaml.dump(val, sort_keys=False), YamlLexer(), _get_formatter()
+    ).strip()
+    return _indent(raw, indentation)
 
 
 def pretty_json(val: dict, indentation: int = 0) -> str:
-    raw = highlight(json.dumps(val, indent=2), JsonLexer(), getFormatter())
-    return indent(raw, indentation)
+    raw = highlight(
+        json.dumps(val, indent=2, sort_keys=False), JsonLexer(), _get_formatter()
+    ).strip()
+    return _indent(raw, indentation)
 
 
-def indent(s: str, indentation: int) -> str:
+def _indent(s: str, indentation: int) -> str:
     prepend = " " * indentation
     return "\n".join(prepend + l for l in s.splitlines())
 
 
-def getFormatter() -> Formatter:
+def _get_formatter() -> Formatter:
     return TerminalTrueColorFormatter() if sys.stdout.isatty() else NullFormatter()

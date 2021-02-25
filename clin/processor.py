@@ -1,10 +1,13 @@
+import json
 import logging
 from typing import Union, Optional
 
+import yaml
 from colorama import Fore
 from deepdiff import DeepDiff
 
 from clin.config import AppConfig
+from clin.models.auth import Auth
 from clin.models.event_type import EventType
 from clin.models.subscription import Subscription
 from clin.nakadi import (
@@ -108,11 +111,20 @@ class Processor:
 
     def _maybe_print_diff(self, entity: Union[EventType, Subscription], diff: DeepDiff):
         if self.show_diff:
+            safe_diff = json.loads(
+                diff.to_json(
+                    default_mapping={
+                        Auth: lambda x: x.to_spec(),
+                        EventType: lambda x: x.to_spec(),
+                    }
+                )
+            )
+
             logging.info(
                 f"{MODIFY_COLOR}⦿ Found %d changes:{Fore.RESET} %s\n%s",
                 len(diff),
                 entity,
-                pretty_yaml(diff.to_dict(), indentation=OUTPUT_INDENTATION),
+                pretty_yaml(safe_diff, indentation=OUTPUT_INDENTATION),
             )
 
     def _maybe_print_payload(self, entity: Union[EventType, Subscription]):

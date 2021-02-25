@@ -4,8 +4,9 @@ import json
 from typing import List, Optional
 
 import requests
+from requests import HTTPError
 
-from clin.models.auth import Auth, AllowedTenants
+from clin.clients.shared import HttpClient, auth_from_payload, auth_to_payload
 from clin.models.event_type import (
     EventType,
     Category,
@@ -18,25 +19,19 @@ from clin.models.subscription import Subscription
 from clin.utils import MS_IN_DAY
 
 
-class Nakadi:
-    def __init__(self, base_url: str, token: Optional[str]):
-        self._base_url = base_url.rstrip("/")
-        self._headers = {"Content-Type": "application/json", "User-Agent": "clin"}
-
-        if token:
-            self._headers["Authorization"] = f"Bearer {token}"
-
+class Nakadi(HttpClient):
     def get_event_type(self, name: str) -> Optional[EventType]:
-        url = f"{self._base_url}/event-types/{name}"
-        resp = requests.get(url, headers=self._headers)
-        if resp.status_code == 200:
-            payload = resp.json()
+        try:
+            payload = self._get(f"event-types/{name}")
             partition_count = self.get_partition_count(name)
             return event_type_from_payload(payload, partition_count)
-        elif resp.status_code == 404:
-            return None
-        else:
-            raise NakadiError(f"Nakadi error during getting event type '{name}'", resp)
+
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            raise NakadiError(
+                f"Nakadi error during getting event type '{name}'", e.response
+            )
 
     def get_partition_count(self, name: str) -> int:
         url = f"{self._base_url}/event-types/{name}/partitions"
@@ -140,49 +135,6 @@ class NakadiError(Exception):
         return msg
 
 
-def _auth_to_payload(a: Auth) -> dict:
-    any_token_write = [{"data_type": "*", "value": "*"}] if a.any_token_write else []
-    any_token_read = [{"data_type": "*", "value": "*"}] if a.any_token_read else []
-    return {
-        "admins": [{"data_type": "user", "value": user} for user in a.users.admins]
-        + [{"data_type": "service", "value": service} for service in a.services.admins],
-        "writers": [{"data_type": "user", "value": user} for user in a.users.writers]
-        + [{"data_type": "service", "value": service} for service in a.services.writers]
-        + any_token_write,
-        "readers": [{"data_type": "user", "value": user} for user in a.users.readers]
-        + [{"data_type": "service", "value": service} for service in a.services.readers]
-        + any_token_read,
-    }
-
-
-def _auth_from_payload(payload: dict) -> Optional[Auth]:
-    if not payload:
-        return None
-
-    auth = Auth(AllowedTenants([], [], []), AllowedTenants([], [], []), False, False)
-    for admin in payload.get("admins", []):
-        if admin["data_type"] == "user":
-            auth.users.admins.append(admin["value"])
-        if admin["data_type"] == "service":
-            auth.services.admins.append(admin["value"])
-    for writer in payload.get("writers", []):
-        if writer["data_type"] == "user":
-            auth.users.writers.append(writer["value"])
-        if writer["data_type"] == "service":
-            auth.services.writers.append(writer["value"])
-        if writer["data_type"] == "*":
-            auth.any_token_write = True
-    for reader in payload.get("readers", []):
-        if reader["data_type"] == "user":
-            auth.users.readers.append(reader["value"])
-        if reader["data_type"] == "service":
-            auth.services.readers.append(reader["value"])
-        if reader["data_type"] == "*":
-            auth.any_token_read = True
-
-    return auth
-
-
 def event_type_to_payload(event_type: EventType) -> dict:
     enrichment_strategies = (
         [] if event_type.category == Category.UNDEFINED else ["metadata_enrichment"]
@@ -210,7 +162,7 @@ def event_type_to_payload(event_type: EventType) -> dict:
             "version": "1.0.0",
             "schema": json.dumps(event_type.schema.json_schema),
         },
-        "authorization": _auth_to_payload(event_type.auth),
+        "authorization": auth_to_payload(event_type.auth),
         "enrichment_strategies": enrichment_strategies,
     }
 
@@ -235,7 +187,7 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
             compatibility=Schema.Compatibility(payload["compatibility_mode"]),
             json_schema=json.loads(payload["schema"]["schema"]),
         ),
-        auth=_auth_from_payload(payload["authorization"]),
+        auth=auth_from_payload(payload["authorization"]),
     )
 
 
@@ -246,7 +198,7 @@ def subscription_to_payload(subscription: Subscription) -> dict:
         "consumer_group": subscription.consumer_group,
         "initial_cursors": [],
         "read_from": "end",
-        "authorization": _auth_to_payload(subscription.auth),
+        "authorization": auth_to_payload(subscription.auth),
     }
 
 
@@ -256,5 +208,5 @@ def subscription_from_payload(payload: dict) -> Subscription:
         owning_application=payload["owning_application"],
         event_types=payload["event_types"],
         consumer_group=payload["consumer_group"],
-        auth=_auth_from_payload(payload["authorization"]),
+        auth=auth_from_payload(payload["authorization"]),
     )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import yaml
 
@@ -11,6 +11,7 @@ import yaml
 @dataclass
 class EnvironmentConfig:
     nakadi_url: str
+    nakadi_sql_url: Optional[str]
 
     @staticmethod
     def load(name: str, content: dict) -> EnvironmentConfig:
@@ -19,7 +20,10 @@ class EnvironmentConfig:
                 f"Nakadi url not found in configuration for environment: {name}"
             )
 
-        return EnvironmentConfig(nakadi_url=content["nakadi_url"])
+        return EnvironmentConfig(
+            nakadi_url=content["nakadi_url"],
+            nakadi_sql_url=content.get("nakadi_sql_url", None),
+        )
 
 
 @dataclass

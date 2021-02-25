@@ -7,16 +7,7 @@ from typing import Optional, List, Dict
 from colorama import Fore
 
 from clin.models.auth import Auth
-
-
-@unique
-class Category(str, Enum):
-    BUSINESS = "business"
-    DATA = "data"
-    UNDEFINED = "undefined"
-
-    def __str__(self) -> str:
-        return str(self.value)
+from clin.models.shared import Cleanup, Category, Entity, Kind
 
 
 @unique
@@ -48,20 +39,6 @@ class Partitioning:
 
 
 @dataclass
-class Cleanup:
-    @unique
-    class Policy(str, Enum):
-        DELETE = "delete"
-        COMPACT = "compact"
-
-        def __str__(self) -> str:
-            return str(self.value)
-
-    policy: Policy
-    retention_time_days: int
-
-
-@dataclass
 class Schema:
     @unique
     class Compatibility(str, Enum):
@@ -77,7 +54,7 @@ class Schema:
 
 
 @dataclass
-class EventType:
+class EventType(Entity):
     name: str
     category: Category
     owning_application: str
@@ -89,6 +66,10 @@ class EventType:
 
     def __str__(self) -> str:
         return f"event type {Fore.BLUE}{self.name}{Fore.RESET}"
+
+    @property
+    def kind(self) -> Kind:
+        return Kind.EVENT_TYPE
 
     @staticmethod
     def from_spec(spec: dict) -> EventType:
@@ -102,12 +83,7 @@ class EventType:
                 keys=spec["partitioning"].get("keys"),
                 partition_count=spec["partitioning"]["partitionCount"],
             ),
-            cleanup=Cleanup(
-                policy=Cleanup.Policy(spec["cleanup"]["policy"]),
-                retention_time_days=spec["cleanup"].get(
-                    "retentionTimeDays", 1
-                ),  # 1 is default Nakadi value
-            ),
+            cleanup=Cleanup.from_spec(spec["cleanup"]),
             schema=Schema(
                 compatibility=Schema.Compatibility(spec["schema"]["compatibility"]),
                 json_schema=spec["schema"]["jsonSchema"],
@@ -126,10 +102,7 @@ class EventType:
                 "keys": self.partitioning.keys,
                 "partitionCount": self.partitioning.partition_count,
             },
-            "cleanup": {
-                "policy": str(self.cleanup.policy),
-                "retentionTimeDays": self.cleanup.retention_time_days,
-            },
+            "cleanup": self.cleanup.to_spec(),
             "schema": {
                 "compatibility": str(self.schema.compatibility),
                 "jsonSchema": self.schema.json_schema,

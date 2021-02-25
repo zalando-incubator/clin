@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Union
+from typing import List
 
 from clin.utils import ensure_flat_list
 
@@ -21,9 +21,7 @@ class Auth:
     any_token_write: bool
 
     @staticmethod
-    def from_spec(
-        spec: Dict[str, Dict[str, Optional[List[Union[str, List[str]]]]]]
-    ) -> Auth:
+    def from_spec(spec: dict) -> Auth:
         def users(role: str) -> List[str]:
             return (
                 list(set(ensure_flat_list(spec["users"].get(role))))

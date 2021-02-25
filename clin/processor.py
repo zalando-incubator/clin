@@ -1,16 +1,16 @@
 import json
 import logging
-from typing import Union, Optional
+from typing import Union, Optional, Dict, Callable
 
-import yaml
 from colorama import Fore
 from deepdiff import DeepDiff
 
 from clin.config import AppConfig
 from clin.models.auth import Auth
 from clin.models.event_type import EventType
+from clin.models.shared import Kind, Envelope
 from clin.models.subscription import Subscription
-from clin.nakadi import (
+from clin.clients.nakadi import (
     Nakadi,
     NakadiError,
     event_type_to_payload,
@@ -37,18 +37,22 @@ class Processor:
             for env, conf in config.environments.items()
         }
 
+        self.apply_func_per_kind: Dict[Kind, Callable[[str, dict], None]] = {
+            Kind.EVENT_TYPE: self.apply_event_type,
+            Kind.PROJECTION: self.apply_projection,
+            Kind.SUBSCRIPTION: self.apply_subscription,
+        }
+
         self.token = token
         self.execute = execute
         self.show_diff = show_diff
         self.show_payload = show_payload
 
-    def apply(self, env: str, kind: str, spec: dict):
-        if kind == "event-type":
-            self.apply_event_type(env, spec)
-        elif kind == "subscription":
-            self.apply_subscription(env, spec)
-        else:
-            raise ProcessingError(f"Invalid kind: {kind}")
+    def apply(self, env: str, envelope: Envelope):
+        apply = self.apply_func_per_kind.get(envelope.kind, None)
+        if envelope.kind is None:
+            raise ProcessingError(f"Unsupported kind: {envelope.kind}")
+        apply(env, envelope.spec)
 
     def apply_event_type(self, env: str, spec: dict):
         nakadi = self._get_nakadi(env)
@@ -74,6 +78,9 @@ class Processor:
 
         except NakadiError as err:
             raise ProcessingError(f"Can not process {et}: {err}") from err
+
+    def apply_projection(self, env: str, spec: dict):
+        print("todo apply projection")
 
     def apply_subscription(self, env: str, spec: dict):
         nakadi = self._get_nakadi(env)

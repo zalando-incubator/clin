@@ -1,10 +1,11 @@
 import logging
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
 import yaml
 
+from clin.models.shared import Envelope
 from clin.utils import walk
 
 
@@ -157,17 +158,9 @@ def load_yaml(file_path: Path, loader: YamlLoader, env: dict) -> dict:
     return loader.load_yaml_from_file(file_path, env)
 
 
-def load_manifest(file_path: Path, loader: YamlLoader, env: dict) -> Tuple[str, dict]:
-    manifest = load_yaml(file_path, loader, env)
-
-    if "kind" not in manifest:
-        raise YamlInvalidFormatError(file_path, f"Required field `kind` not found")
-    if "spec" not in manifest:
-        raise YamlInvalidFormatError(file_path, f"Required field `spec` not found")
-
-    if manifest["kind"] not in ["event-type", "subscription"]:
-        raise YamlInvalidFormatError(
-            file_path, f"Unknown manifest of kind '{manifest['kind']}'"
-        )
-
-    return manifest["kind"], manifest["spec"]
+def load_manifest(file_path: Path, loader: YamlLoader, env: dict) -> Envelope:
+    try:
+        manifest = load_yaml(file_path, loader, env)
+        return Envelope.from_manifest(manifest)
+    except ValueError as e:
+        raise YamlInvalidFormatError(file_path, str(e))

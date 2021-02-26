@@ -46,6 +46,9 @@ jobs:
       - name: Run linter
         run: poetry run black clin --check
 
+      - name: Build packages
+        run: poetry build
+
       - name: Run tests
         run: poetry run pytest
 

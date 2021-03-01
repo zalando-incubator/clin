@@ -61,7 +61,7 @@ def test_loads_auth_as_flat_lists_without_duplicates():
 
 @pytest.mark.parametrize("kind_spec,expected_kind", [
     ("event-type", Kind.EVENT_TYPE),
-    ("projection", Kind.PROJECTION),
+    ("sql-query", Kind.SQL_QUERY),
     ("subscription", Kind.SUBSCRIPTION),
 ])
 def test_parses_envelope_from_valid_manifest(kind_spec: str, expected_kind: Kind):

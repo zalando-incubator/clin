@@ -15,7 +15,7 @@ class OutputEventType:
 
 
 @dataclass
-class Projection(Entity):
+class SqlQuery(Entity):
     name: str
     sql: str
     envelope: bool
@@ -23,15 +23,15 @@ class Projection(Entity):
     auth: Auth
 
     def __str__(self) -> str:
-        return f"projection {Fore.BLUE}{self.name}{Fore.RESET}"
+        return f"sql query {Fore.BLUE}{self.name}{Fore.RESET}"
 
     @property
     def kind(self) -> Kind:
-        return Kind.PROJECTION
+        return Kind.SQL_QUERY
 
     @staticmethod
-    def from_spec(spec: dict) -> Projection:
-        return Projection(
+    def from_spec(spec: dict) -> SqlQuery:
+        return SqlQuery(
             name=spec["name"],
             sql=spec["sql"],
             envelope=spec["envelope"],

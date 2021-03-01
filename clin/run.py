@@ -248,7 +248,7 @@ def dump(
 
         if config.environments[env].nakadi_sql_url:
             nakadi_sql = NakadiSql(config.environments[env].nakadi_sql_url, token)
-            entity = nakadi_sql.get_projection(event_type)
+            entity = nakadi_sql.get_sql_query(event_type)
 
         if entity is None:
             nakadi = Nakadi(config.environments[env].nakadi_url, token)

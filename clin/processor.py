@@ -39,7 +39,7 @@ class Processor:
 
         self.apply_func_per_kind: Dict[Kind, Callable[[str, dict], None]] = {
             Kind.EVENT_TYPE: self.apply_event_type,
-            Kind.PROJECTION: self.apply_projection,
+            Kind.SQL_QUERY: self.apply_sql_query,
             Kind.SUBSCRIPTION: self.apply_subscription,
         }
 
@@ -79,8 +79,8 @@ class Processor:
         except NakadiError as err:
             raise ProcessingError(f"Can not process {et}: {err}") from err
 
-    def apply_projection(self, env: str, spec: dict):
-        print("todo apply projection")
+    def apply_sql_query(self, env: str, spec: dict):
+        print("todo apply sql_query")
 
     def apply_subscription(self, env: str, spec: dict):
         nakadi = self._get_nakadi(env)

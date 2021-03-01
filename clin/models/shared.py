@@ -47,7 +47,7 @@ class Cleanup:
 @unique
 class Kind(str, Enum):
     EVENT_TYPE = "event-type"
-    PROJECTION = "projection"
+    SQL_QUERY = "sql-query"
     SUBSCRIPTION = "subscription"
 
     def __str__(self) -> str:

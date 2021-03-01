@@ -4,34 +4,33 @@ from requests import HTTPError
 
 from clin.clients.nakadi import NakadiError
 from clin.clients.shared import HttpClient, auth_to_payload, auth_from_payload
-from clin.models.auth import Auth
-from clin.models.projection import Projection, OutputEventType
+from clin.models.sql_query import SqlQuery, OutputEventType
 from clin.models.shared import Category, Cleanup
 from clin.utils import MS_IN_DAY
 
 
 class NakadiSql(HttpClient):
-    def get_projection(self, id: str) -> Optional[Projection]:
+    def get_sql_query(self, name: str) -> Optional[SqlQuery]:
         try:
-            payload = self._get(f"queries/{id}")
-            return projection_from_payload(payload)
+            payload = self._get(f"queries/{name}")
+            return sql_query_from_payload(payload)
 
         except HTTPError as e:
             if e.response.status_code == 404:
                 return None
             raise NakadiError(
-                f"Nakadi error trying to get projection '{id}'", e.response
+                f"Nakadi error trying to get sql query '{name}'", e.response
             )
 
 
-def projection_from_payload(payload: dict) -> Projection:
+def sql_query_from_payload(payload: dict) -> SqlQuery:
     if payload["id"] != payload["output_event_type"]["name"]:
         raise NakadiError(
-            "The output event type's name does not match the projection id."
+            "The output event type's name does not match the sql query id."
             " This is unexpected and unsupported - please report this issue in the clin project on GitHub!"
         )
 
-    return Projection(
+    return SqlQuery(
         name=payload["id"],
         sql=payload["sql"],
         envelope=payload["envelope"],
@@ -49,17 +48,17 @@ def projection_from_payload(payload: dict) -> Projection:
     )
 
 
-def projection_to_payload(projection: Projection) -> dict:
+def sql_query_to_payload(sql_query: SqlQuery) -> dict:
     return {
-        "id": projection.name,
-        "sql": projection.sql,
-        "envelope": projection.envelope,
+        "id": sql_query.name,
+        "sql": sql_query.sql,
+        "envelope": sql_query.envelope,
         "output_event_type": {
-            "name": projection.name,
-            "category": str(projection.output_event_type.category),
-            "cleanup_policy": str(projection.output_event_type.cleanup.policy),
-            "retention_time": projection.output_event_type.cleanup.retention_time_days
+            "name": sql_query.name,
+            "category": str(sql_query.output_event_type.category),
+            "cleanup_policy": str(sql_query.output_event_type.cleanup.policy),
+            "retention_time": sql_query.output_event_type.cleanup.retention_time_days
             * MS_IN_DAY,
         },
-        "authorization": auth_to_payload(projection.auth),
+        "authorization": auth_to_payload(sql_query.auth),
     }

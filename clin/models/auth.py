@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 from clin.utils import ensure_flat_list
 
 
 @dataclass
 class AllowedTenants:
-    admins: List[str]
-    writers: List[str]
-    readers: List[str]
+    admins: list[str]
+    writers: list[str]
+    readers: list[str]
 
 
 @dataclass
@@ -22,14 +21,14 @@ class Auth:
 
     @staticmethod
     def from_spec(spec: dict) -> Auth:
-        def users(role: str) -> List[str]:
+        def users(role: str) -> list[str]:
             return (
                 list(set(ensure_flat_list(spec["users"].get(role))))
                 if spec["users"]
                 else []
             )
 
-        def services(role: str) -> List[str]:
+        def services(role: str) -> list[str]:
             return (
                 list(set(ensure_flat_list(spec["services"].get(role))))
                 if spec["services"]
@@ -51,7 +50,7 @@ class Auth:
             any_token_write=spec["anyToken"].get("write", False),
         )
 
-    def to_spec(self) -> dict:
+    def to_spec(self) -> dict[str, dict[str, list[str]]]:
         return {
             "users": {
                 "admins": self.users.admins,

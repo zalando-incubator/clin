@@ -142,9 +142,9 @@ def event_type_to_payload(event_type: EventType) -> dict:
     return {
         "name": event_type.name,
         "owning_application": event_type.owning_application,
-        "category": event_type.category,
-        "audience": event_type.audience,
-        "partition_strategy": event_type.partitioning.strategy,
+        "category": str(event_type.category),
+        "audience": str(event_type.audience),
+        "partition_strategy": str(event_type.partitioning.strategy),
         "partition_key_fields": event_type.partitioning.keys,
         "default_statistic": {
             "messages_per_minute": 100,
@@ -172,7 +172,7 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
         name=payload["name"],
         category=Category(payload["category"]),
         owning_application=payload["owning_application"],
-        audience=Audience(payload["audience"]) if payload.get("audience") else None,
+        audience=Audience(payload["audience"]) if "audience" in payload else None,
         partitioning=Partitioning(
             strategy=Partitioning.Strategy(payload["partition_strategy"]),
             keys=payload.get("partition_key_fields"),

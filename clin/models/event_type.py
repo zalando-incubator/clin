@@ -1,56 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum, unique
-from typing import Optional, List, Dict
 
 from colorama import Fore
 
 from clin.models.auth import Auth
-from clin.models.shared import Cleanup, Category, Entity, Kind
-
-
-@unique
-class Audience(str, Enum):
-    COMPONENT_INTERNAL = "component-internal"
-    BUSINESS_UNIT_INTERNAL = "business-unit-internal"
-    COMPANY_INTERNAL = "company-internal"
-    EXTERNAL_PARTNER = "external-partner"
-    EXTERNAL_PUBLIC = "external-public"
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-
-@dataclass
-class Partitioning:
-    @unique
-    class Strategy(str, Enum):
-        USER_DEFINED = "user_defined"
-        HASH = "hash"
-        RANDOM = "random"
-
-        def __str__(self) -> str:
-            return str(self.value)
-
-    strategy: Strategy
-    keys: Optional[List[str]]
-    partition_count: int
-
-
-@dataclass
-class Schema:
-    @unique
-    class Compatibility(str, Enum):
-        NONE = "none"
-        FORWARD = "forward"
-        COMPATIBLE = "compatible"
-
-        def __str__(self) -> str:
-            return str(self.value)
-
-    compatibility: Compatibility
-    json_schema: Dict
+from clin.models.shared import (
+    Cleanup,
+    Category,
+    Entity,
+    Kind,
+    Audience,
+    Partitioning,
+    Schema,
+)
 
 
 @dataclass
@@ -72,40 +35,26 @@ class EventType(Entity):
         return Kind.EVENT_TYPE
 
     @staticmethod
-    def from_spec(spec: dict) -> EventType:
+    def from_spec(spec: dict[str, any]) -> EventType:
         return EventType(
             name=spec["name"],
             category=Category(spec["category"]),
             owning_application=spec["owningApplication"],
             audience=Audience(spec["audience"]),
-            partitioning=Partitioning(
-                strategy=Partitioning.Strategy(spec["partitioning"]["strategy"]),
-                keys=spec["partitioning"].get("keys"),
-                partition_count=spec["partitioning"]["partitionCount"],
-            ),
+            partitioning=Partitioning.from_spec(spec["partitioning"]),
             cleanup=Cleanup.from_spec(spec["cleanup"]),
-            schema=Schema(
-                compatibility=Schema.Compatibility(spec["schema"]["compatibility"]),
-                json_schema=spec["schema"]["jsonSchema"],
-            ),
+            schema=Schema.from_spec(spec["schema"]),
             auth=Auth.from_spec(spec["auth"]),
         )
 
-    def to_spec(self) -> dict:
+    def to_spec(self) -> dict[str, any]:
         return {
             "name": self.name,
             "category": str(self.category),
             "owningApplication": self.owning_application,
             "audience": str(self.audience),
-            "partitioning": {
-                "strategy": str(self.partitioning.strategy),
-                "keys": self.partitioning.keys,
-                "partitionCount": self.partitioning.partition_count,
-            },
+            "partitioning": self.partitioning.to_spec(),
             "cleanup": self.cleanup.to_spec(),
-            "schema": {
-                "compatibility": str(self.schema.compatibility),
-                "jsonSchema": self.schema.json_schema,
-            },
+            "schema": self.schema.to_spec(),
             "auth": self.auth.to_spec() if self.auth else {},
         }

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from colorama import Fore
@@ -14,7 +14,7 @@ from clin.models.shared import Kind, Entity
 class Subscription(Entity):
     id: Optional[UUID]
     owning_application: str
-    event_types: List[str]
+    event_types: list[str]
     consumer_group: str
     auth: Auth
 
@@ -29,7 +29,7 @@ class Subscription(Entity):
         return Kind.SUBSCRIPTION
 
     @staticmethod
-    def from_spec(spec: dict) -> Subscription:
+    def from_spec(spec: dict[str, any]) -> Subscription:
         return Subscription(
             id=None,
             owning_application=spec["owningApplication"],
@@ -40,7 +40,7 @@ class Subscription(Entity):
 
     @staticmethod
     def components_string(
-        event_types: List[str],
+        event_types: list[str],
         owning_application: str,
         consumer_group: str,
     ):
@@ -50,5 +50,5 @@ class Subscription(Entity):
             f" consumer group: '{consumer_group}'"
         )
 
-    def to_spec(self) -> dict:
+    def to_spec(self) -> dict[str, any]:
         raise NotImplementedError()

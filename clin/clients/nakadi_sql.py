@@ -4,26 +4,29 @@ from requests import HTTPError
 
 from clin.clients.nakadi import NakadiError
 from clin.clients.shared import HttpClient, auth_to_payload, auth_from_payload
+from clin.models.event_type import EventType
 from clin.models.sql_query import SqlQuery, OutputEventType
 from clin.models.shared import Category, Cleanup, Audience, Partitioning
 from clin.utils import MS_IN_DAY
 
 
 class NakadiSql(HttpClient):
-    def get_sql_query(self, name: str) -> Optional[SqlQuery]:
+    def get_sql_query(self, event_type: EventType) -> Optional[SqlQuery]:
         try:
-            payload = self._get(f"queries/{name}")
-            return sql_query_from_payload(payload)
+            payload = self._get(f"queries/{event_type.name}")
+            return sql_query_from_payload(event_type, payload)
 
         except HTTPError as e:
             if e.response.status_code == 404:
                 return None
             raise NakadiError(
-                f"Nakadi error trying to get sql query '{name}'", e.response
+                f"Nakadi error trying to get sql query '{event_type}'", e.response
             )
 
 
-def output_event_type_from_payload(payload: dict) -> OutputEventType:
+def output_event_type_from_payload(
+    event_type: EventType, payload: dict
+) -> OutputEventType:
     def convert_repartitioning() -> Optional[Partitioning]:
         return (
             Partitioning(
@@ -41,8 +44,10 @@ def output_event_type_from_payload(payload: dict) -> OutputEventType:
 
     return OutputEventType(
         category=Category(payload["category"]),
-        owning_application=payload.get("owning_application", None),
-        audience=Audience(payload["audience"]) if "audience" in payload else None,
+        owning_application=payload.get(
+            "owning_application", event_type.owning_application
+        ),
+        audience=Audience(payload.get("audience", event_type.audience)),
         repartitioning=convert_repartitioning(),
         cleanup=Cleanup(
             policy=Cleanup.Policy(payload["cleanup_policy"]),
@@ -51,7 +56,7 @@ def output_event_type_from_payload(payload: dict) -> OutputEventType:
     )
 
 
-def sql_query_from_payload(payload: dict) -> SqlQuery:
+def sql_query_from_payload(event_type: EventType, payload: dict) -> SqlQuery:
     if payload["id"] != payload["output_event_type"]["name"]:
         raise NakadiError(
             "The output event type's name does not match the sql query id."
@@ -62,7 +67,9 @@ def sql_query_from_payload(payload: dict) -> SqlQuery:
         name=payload["id"],
         sql=payload["sql"],
         envelope=payload["envelope"],
-        output_event_type=output_event_type_from_payload(payload["output_event_type"]),
+        output_event_type=output_event_type_from_payload(
+            event_type, payload["output_event_type"]
+        ),
         auth=auth_from_payload(payload["authorization"]),
     )
 

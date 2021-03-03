@@ -2,6 +2,7 @@ import os
 from typing import Optional
 
 import requests
+from requests import Response
 
 from clin import __version__
 from clin.models.auth import Auth, AllowedTenants
@@ -17,11 +18,19 @@ class HttpClient:
         if token:
             self._headers["Authorization"] = f"Bearer {token}"
 
-    def _get(self, path: str) -> dict:
+    def _get(self, path: str, **kwargs) -> dict:
         url = os.path.join(self._base_url, path)
-        resp = requests.get(url, headers=self._headers)
+        resp = requests.get(url, headers=self._headers, **kwargs)
         resp.raise_for_status()
         return resp.json()
+
+    def _post(self, path: str, **kwargs) -> Response:
+        url = os.path.join(self._base_url, path)
+        return requests.post(url, **kwargs)
+
+    def _put(self, path: str, **kwargs) -> Response:
+        url = os.path.join(self._base_url, path)
+        return requests.put(url, **kwargs)
 
 
 def auth_to_payload(a: Auth) -> dict:

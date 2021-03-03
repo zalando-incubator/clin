@@ -244,15 +244,14 @@ def dump(
             logging.error(f"Environment not found in configuration: {env}")
             exit(-1)
 
-        entity: Optional[Entity] = None
+        nakadi = Nakadi(config.environments[env].nakadi_url, token)
+        entity = nakadi.get_event_type(event_type)
 
         if config.environments[env].nakadi_sql_url:
             nakadi_sql = NakadiSql(config.environments[env].nakadi_sql_url, token)
-            entity = nakadi_sql.get_sql_query(event_type)
-
-        if entity is None:
-            nakadi = Nakadi(config.environments[env].nakadi_url, token)
-            entity = nakadi.get_event_type(event_type)
+            sql_query = nakadi_sql.get_sql_query(entity)
+            if sql_query:
+                entity = sql_query
 
         if entity is None:
             logging.error("Event type not found in Nakadi %s: %s", env, event_type)

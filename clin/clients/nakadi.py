@@ -4,7 +4,7 @@ import json
 from typing import List, Optional
 
 import requests
-from requests import HTTPError
+from requests import HTTPError, Response
 
 from clin.clients.shared import HttpClient, auth_from_payload, auth_to_payload
 from clin.models.event_type import (
@@ -34,19 +34,17 @@ class Nakadi(HttpClient):
             )
 
     def get_partition_count(self, name: str) -> int:
-        url = f"{self._base_url}/event-types/{name}/partitions"
-        resp = requests.get(url, headers=self._headers)
-        cursors = []
-        if resp.status_code == 200:
-            cursors = resp.json()
-        if not cursors:
-            raise NakadiError(f"Can not get partitions for event type'{name}'", resp)
-        return len(cursors)
+        try:
+            return len(self._get(f"event-types/{name}/partitions"))
+
+        except HTTPError as e:
+            raise NakadiError(
+                f"Can not get partitions for event type'{name}'", e.response
+            )
 
     def create_event_type(self, event_type: EventType):
-        payload = json.dumps(event_type_to_payload(event_type))
-        resp = requests.post(
-            f"{self._base_url}/event-types", headers=self._headers, data=payload
+        resp = self._post(
+            "event-types", data=json.dumps(event_type_to_payload(event_type))
         )
         if resp.status_code != 201:
             raise NakadiError(
@@ -54,11 +52,9 @@ class Nakadi(HttpClient):
             )
 
     def update_event_type(self, event_type: EventType):
-        payload = json.dumps(event_type_to_payload(event_type))
-        resp = requests.put(
-            f"{self._base_url}/event-types/{event_type.name}",
-            headers=self._headers,
-            data=payload,
+        resp = self._put(
+            f"event-types/{event_type.name}",
+            data=json.dumps(event_type_to_payload(event_type)),
         )
         if resp.status_code != 200:
             raise NakadiError(
@@ -118,7 +114,7 @@ class Nakadi(HttpClient):
 
 
 class NakadiError(Exception):
-    def __init__(self, message: str, response: requests.Response):
+    def __init__(self, message: str, response: Response):
         self.response = response
         self._message = message
 

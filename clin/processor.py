@@ -1,24 +1,27 @@
 import json
 import logging
-from typing import Union, Optional, Dict, Callable
+from typing import Optional, Dict, Callable
 
 from colorama import Fore
 from deepdiff import DeepDiff
 
-from clin.config import AppConfig
-from clin.models.auth import Auth
-from clin.models.event_type import EventType
-from clin.models.shared import Kind, Envelope
-from clin.models.subscription import Subscription
 from clin.clients.nakadi import (
     Nakadi,
     NakadiError,
     event_type_to_payload,
     subscription_to_payload,
 )
+from clin.clients.nakadi_sql import NakadiSql, sql_query_to_payload
+from clin.config import AppConfig
+from clin.models.auth import FullAuth, ReadOnlyAuth
+from clin.models.event_type import EventType
+from clin.models.shared import Kind, Envelope, Entity
+from clin.models.sql_query import SqlQuery
+from clin.models.subscription import Subscription
 from clin.utils import pretty_yaml, pretty_json
 
 MODIFY_COLOR = Fore.MAGENTA
+ERROR_COLOR = Fore.RED
 UP_TO_DATE_COLOR = Fore.GREEN
 OUTPUT_INDENTATION = 4
 
@@ -32,11 +35,6 @@ class Processor:
         show_diff: bool = False,
         show_payload: bool = False,
     ):
-        self.nakadi = {
-            env: Nakadi(conf.nakadi_url, token)
-            for env, conf in config.environments.items()
-        }
-
         self.apply_func_per_kind: Dict[Kind, Callable[[str, dict], None]] = {
             Kind.EVENT_TYPE: self.apply_event_type,
             Kind.SQL_QUERY: self.apply_sql_query,
@@ -44,6 +42,7 @@ class Processor:
         }
 
         self.token = token
+        self.config = config
         self.execute = execute
         self.show_diff = show_diff
         self.show_payload = show_payload
@@ -55,7 +54,7 @@ class Processor:
         apply(env, envelope.spec)
 
     def apply_event_type(self, env: str, spec: dict):
-        nakadi = self._get_nakadi(env)
+        nakadi = Nakadi(self.config.environments[env].nakadi_url, self.token)
         et = EventType.from_spec(spec)
 
         try:
@@ -80,10 +79,47 @@ class Processor:
             raise ProcessingError(f"Can not process {et}: {err}") from err
 
     def apply_sql_query(self, env: str, spec: dict):
-        print("todo apply sql_query")
+        nakadi = Nakadi(self.config.environments[env].nakadi_url, self.token)
+        nakadi_sql = NakadiSql(self.config.environments[env].nakadi_sql_url, self.token)
+        query = SqlQuery.from_spec(spec)
+
+        try:
+            current_et = nakadi.get_event_type(query.name)
+            current = nakadi_sql.get_sql_query(current_et) if current_et else None
+            if current:
+                logging.debug("Found existing %s", query)
+
+                diff = DeepDiff(
+                    current, query, ignore_order=True, report_repetition=True
+                )
+                if diff:
+                    self._maybe_print_diff(query, diff)
+
+                    if "values_changed" in diff:
+                        logging.info(
+                            f"{ERROR_COLOR}× Modifying output event type is forbidden:{Fore.RESET} %s",
+                            query,
+                        )
+
+                    else:
+                        self._maybe_print_payload(query)
+                        self._update_sql_query(nakadi_sql, query)
+
+                else:
+                    logging.info(
+                        f"{UP_TO_DATE_COLOR}✔ Up to date:{Fore.RESET} %s", query
+                    )
+
+            else:
+                logging.debug("Not found existing %s", query)
+                self._maybe_print_payload(query)
+                self._create_sql_query(nakadi, nakadi_sql, query)
+
+        except NakadiError as err:
+            raise ProcessingError(f"Can not process {query}: {err}") from err
 
     def apply_subscription(self, env: str, spec: dict):
-        nakadi = self._get_nakadi(env)
+        nakadi = Nakadi(self.config.environments[env].nakadi_url, self.token)
         sub = Subscription.from_spec(spec)
 
         try:
@@ -110,19 +146,20 @@ class Processor:
         except NakadiError as err:
             raise ProcessingError(f"Can not process {sub}: {err}") from err
 
-    def _get_nakadi(self, env: str):
-        try:
-            return self.nakadi[env]
-        except KeyError:
-            raise ProcessingError(f"Unknown environment: {env}")
+    def _maybe_print_diff(self, entity: Entity, diff: DeepDiff):
+        def convert_to_spec(x):
+            return x.to_spec()
 
-    def _maybe_print_diff(self, entity: Union[EventType, Subscription], diff: DeepDiff):
         if self.show_diff:
             safe_diff = json.loads(
                 diff.to_json(
                     default_mapping={
-                        Auth: lambda x: x.to_spec(),
-                        EventType: lambda x: x.to_spec(),
+                        ReadOnlyAuth: convert_to_spec,
+                        FullAuth: convert_to_spec,
+                        EventType: convert_to_spec,
+                        SqlQuery: convert_to_spec,
+                        Subscription: convert_to_spec,
+                        Entity: convert_to_spec,
                     }
                 )
             )
@@ -134,12 +171,14 @@ class Processor:
                 pretty_yaml(safe_diff, indentation=OUTPUT_INDENTATION),
             )
 
-    def _maybe_print_payload(self, entity: Union[EventType, Subscription]):
+    def _maybe_print_payload(self, entity: Entity):
         if self.show_payload:
             if isinstance(entity, EventType):
                 payload = event_type_to_payload(entity)
             elif isinstance(entity, Subscription):
                 payload = subscription_to_payload(entity)
+            elif isinstance(entity, SqlQuery):
+                payload = sql_query_to_payload(entity)
             else:
                 logging.warning("Failed to print payload for %s", entity)
                 return
@@ -150,33 +189,47 @@ class Processor:
                 pretty_json(payload, indentation=OUTPUT_INDENTATION),
             )
 
-    def _update_event_type(self, nakadi, et):
+    def _update_event_type(self, nakadi: Nakadi, et: EventType):
         if self.execute:
             nakadi.update_event_type(et)
             logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s", et)
         else:
             logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s", et)
 
-    def _create_event_type(self, nakadi, et):
+    def _create_event_type(self, nakadi: Nakadi, et: EventType):
         if self.execute:
             nakadi.create_event_type(et)
             logging.info(f"{MODIFY_COLOR}⦿ Created:{Fore.RESET} %s", et)
         else:
             logging.info(f"{MODIFY_COLOR}⦿ Will create:{Fore.RESET} %s", et)
 
-    def _update_subscription(self, nakadi, sub):
+    def _update_subscription(self, nakadi: Nakadi, sub: Subscription):
         if self.execute:
             nakadi.update_subscription(sub)
             logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s", sub)
         else:
             logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s", sub)
 
-    def _create_subscription(self, nakadi, sub):
+    def _create_subscription(self, nakadi: Nakadi, sub: Subscription):
         if self.execute:
             nakadi.create_subscription(sub)
             logging.info(f"{MODIFY_COLOR}⦿ Created:{Fore.RESET} %s", sub)
         else:
             logging.info(f"{MODIFY_COLOR}⦿ Will create:{Fore.RESET} %s", sub)
+
+    def _update_sql_query(self, nakadi_sql: NakadiSql, query: SqlQuery):
+        if self.execute:
+            nakadi_sql.update_sql_query_auth(query)
+            logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s", query)
+        else:
+            logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s", query)
+
+    def _create_sql_query(self, nakadi: Nakadi, nakadi_sql: NakadiSql, query: SqlQuery):
+        if self.execute:
+            nakadi_sql.create_sql_query(query)
+            logging.info(f"{MODIFY_COLOR}⦿ Created:{Fore.RESET} %s", query)
+        else:
+            logging.info(f"{MODIFY_COLOR}⦿ Will create:{Fore.RESET} %s", query)
 
 
 class ProcessingError(Exception):

@@ -6,7 +6,8 @@ from typing import List, Optional
 import requests
 from requests import HTTPError, Response
 
-from clin.clients.shared import HttpClient, auth_from_payload, auth_to_payload
+from clin.clients.http_client import HttpClient
+from clin.models.auth import FullAuth
 from clin.models.event_type import (
     EventType,
     Category,
@@ -121,14 +122,19 @@ class NakadiError(Exception):
     def __str__(self):
         code = self.response.status_code
         msg = f"{self._message}: {code}"
-        if code // 100 == 2:
-            msg += f" - {self.response.json()}"
-        elif code // 100 >= 4:
-            problem = self.response.json()
-            msg += f" - {problem['detail']}"
-        else:
-            msg += ": " + self.response.text
-        return msg
+
+        try:
+            body = self.response.json()
+            if "problem" in body:
+                return msg + " - " + body["problem"]["detail"]
+            else:
+                return msg + " - " + body
+
+        except Exception:
+            if self.response.text:
+                return msg + " - " + self.response.text
+            else:
+                return msg
 
 
 def event_type_to_payload(event_type: EventType) -> dict:
@@ -206,3 +212,43 @@ def subscription_from_payload(payload: dict) -> Subscription:
         consumer_group=payload["consumer_group"],
         auth=auth_from_payload(payload["authorization"]),
     )
+
+
+def auth_to_payload(auth: FullAuth) -> dict:
+    def parse(role: str):
+        def el(key: str):
+            return [
+                {"data_type": key, "value": x} for x in getattr(auth, key + "s")[role]
+            ]
+
+        return el("user") + el("service")
+
+    payload = {role: parse(role) for role in auth.get_roles()}
+    if auth.any_token_read:
+        payload["readers"].append({"data_type": "*", "value": "*"})
+    if auth.any_token_write:
+        payload["writers"].append({"data_type": "*", "value": "*"})
+
+    return payload
+
+
+def auth_from_payload(payload: dict) -> Optional[FullAuth]:
+    if not payload:
+        return None
+
+    auth = FullAuth({}, {}, False, False)
+    for role in FullAuth.get_roles():
+        auth.users[role] = []
+        auth.services[role] = []
+        for el in payload.get(role, []):
+            if el["data_type"] == "user":
+                auth.users[role].append(el["value"])
+            if el["data_type"] == "service":
+                auth.services[role].append(el["value"])
+            if el["data_type"] == "*":
+                if role == "readers":
+                    auth.any_token_read = True
+                if role == "writers":
+                    auth.any_token_write = True
+
+    return auth

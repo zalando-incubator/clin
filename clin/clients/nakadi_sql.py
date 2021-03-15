@@ -1,9 +1,11 @@
+import json
 from typing import Optional
 
 from requests import HTTPError
 
 from clin.clients.nakadi import NakadiError
-from clin.clients.shared import HttpClient, auth_to_payload, auth_from_payload
+from clin.clients.http_client import HttpClient
+from clin.models.auth import ReadOnlyAuth
 from clin.models.event_type import EventType
 from clin.models.sql_query import SqlQuery, OutputEventType
 from clin.models.shared import Category, Cleanup, Audience, Partitioning
@@ -21,6 +23,23 @@ class NakadiSql(HttpClient):
                 return None
             raise NakadiError(
                 f"Nakadi error trying to get sql query '{event_type}'", e.response
+            )
+
+    def create_sql_query(self, sql_query: SqlQuery):
+        resp = self._post("queries", data=json.dumps(sql_query_to_payload(sql_query)))
+        if resp.status_code != 201:
+            raise NakadiError(
+                f"Nakadi error during creation of sql query '{sql_query.name}'", resp
+            )
+
+    def update_sql_query_auth(self, sql_query: SqlQuery):
+        resp = self._put(
+            f"queries/{sql_query.name}/authorization",
+            data=json.dumps(auth_to_payload(sql_query.auth)),
+        )
+        if resp.status_code != 200:
+            raise NakadiError(
+                f"Nakadi error during updating of sql query '{sql_query.name}'", resp
             )
 
 
@@ -101,3 +120,32 @@ def sql_query_to_payload(sql_query: SqlQuery) -> dict:
         }
 
     return payload
+
+
+def auth_to_payload(auth: ReadOnlyAuth) -> dict:
+    def parse(role: str):
+        def el(key: str):
+            return [
+                {"data_type": key, "value": x} for x in getattr(auth, key + "s")[role]
+            ]
+
+        return el("user") + el("service")
+
+    return {role: parse(role) for role in auth.get_roles()}
+
+
+def auth_from_payload(payload: dict) -> Optional[ReadOnlyAuth]:
+    if not payload:
+        return None
+
+    auth = ReadOnlyAuth({}, {})
+    for role in ReadOnlyAuth.get_roles():
+        auth.users[role] = []
+        auth.services[role] = []
+        for el in payload.get(role, []):
+            if el["data_type"] == "user":
+                auth.users[role].append(el["value"])
+            if el["data_type"] == "service":
+                auth.services[role].append(el["value"])
+
+    return auth

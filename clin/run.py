@@ -11,7 +11,6 @@ from clin.clients.nakadi_sql import NakadiSql
 from clin.clinfile import calculate_scope
 from clin.config import ConfigurationError, load_config
 from clin.clients.nakadi import Nakadi, NakadiError
-from clin.models.shared import Entity
 from clin.processor import Processor, ProcessingError
 from clin.utils import configure_logging, pretty_yaml, pretty_json
 from clin.yamlops import YamlLoader, load_manifest, load_yaml, YamlError
@@ -169,18 +168,17 @@ def process(
         processor = Processor(config, token, execute, show_diff, show_payload)
         file_path: Path = Path(file)
         master = load_yaml(file_path, DEFAULT_YAML_LOADER, os.environ)
-        scope = calculate_scope(master, file_path.parent, DEFAULT_YAML_LOADER, id, env)
-        event_types = [et for et in scope if et.kind == "event-type"]
-        subscriptions = [sub for sub in scope if sub.kind == "subscription"]
 
-        for task in event_types + subscriptions:
+        for task in calculate_scope(
+            master, file_path.parent, DEFAULT_YAML_LOADER, id, env
+        ):
             logging.debug(
                 "[%s] applying file %s to %s environment",
                 task.id,
                 task.path,
                 task.target,
             )
-            processor.apply(task.target, task.kind, task.spec)
+            processor.apply(task.target, task.envelope)
 
     except (ProcessingError, ConfigurationError, YamlError) as ex:
         logging.error(ex)
@@ -247,11 +245,9 @@ def dump(
         nakadi = Nakadi(config.environments[env].nakadi_url, token)
         entity = nakadi.get_event_type(event_type)
 
-        if config.environments[env].nakadi_sql_url:
+        if entity and config.environments[env].nakadi_sql_url:
             nakadi_sql = NakadiSql(config.environments[env].nakadi_sql_url, token)
-            sql_query = nakadi_sql.get_sql_query(entity)
-            if sql_query:
-                entity = sql_query
+            entity = nakadi_sql.get_sql_query(entity) or entity
 
         if entity is None:
             logging.error("Event type not found in Nakadi %s: %s", env, event_type)

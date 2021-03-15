@@ -4,6 +4,7 @@ from itertools import chain
 from pathlib import Path
 from typing import List, Tuple
 
+from clin.models.shared import Envelope
 from clin.yamlops import YamlLoader
 
 
@@ -11,8 +12,7 @@ from clin.yamlops import YamlLoader
 class Process:
     id: str
     path: str
-    kind: str
-    spec: dict
+    envelope: Envelope
     target: str
 
 
@@ -52,29 +52,15 @@ def calculate_scope(
                 )
 
         for manifest_file in manifests_files:
-            yml = loader.load_yaml_from_file(manifest_file, proc.get("env", {}))
-
-            kind = yml.get("kind")
-            if not kind:
-                raise Exception(
-                    f"Manifest file '{manifest_file}' for process '{proc_id}'"
-                    f" is malformed, required field `kind` is not found"
-                )
-
-            spec = yml.get("spec")
-            if not spec:
-                raise Exception(
-                    f"Manifest file '{manifest_file}' for process '{proc_id}'"
-                    f" is malformed, required field `spec` is not found"
-                )
-
+            manifest = loader.load_yaml_from_file(manifest_file, proc.get("env", {}))
+            envelope = Envelope.from_manifest(manifest)
             scope.append(
                 Process(
                     id=proc_id,
                     path=manifest_file,
-                    kind=kind,
-                    spec=spec,
+                    envelope=envelope,
                     target=proc["target"],
                 )
             )
+
     return scope

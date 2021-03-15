@@ -5,7 +5,7 @@ from typing import Optional
 
 from colorama import Fore
 
-from clin.models.auth import Auth
+from clin.models.auth import ReadOnlyAuth
 from clin.models.shared import Cleanup, Category, Entity, Kind, Audience, Partitioning
 
 
@@ -21,7 +21,7 @@ class OutputEventType:
     def from_spec(spec: dict[str, any]):
         return OutputEventType(
             category=Category(spec["category"]),
-            owning_application=spec["owning_application"],
+            owning_application=spec["owningApplication"],
             audience=Audience(spec["audience"]),
             repartitioning=Partitioning.from_spec(spec["repartitioning"])
             if "repartitioning" in spec
@@ -49,7 +49,7 @@ class SqlQuery(Entity):
     sql: str
     envelope: bool
     output_event_type: OutputEventType
-    auth: Auth
+    auth: ReadOnlyAuth
 
     def __str__(self) -> str:
         return f"sql query {Fore.BLUE}{self.name}{Fore.RESET}"
@@ -65,7 +65,7 @@ class SqlQuery(Entity):
             sql=spec["sql"],
             envelope=spec["envelope"],
             output_event_type=OutputEventType.from_spec(spec["outputEventType"]),
-            auth=Auth.from_spec(spec["auth"]),
+            auth=ReadOnlyAuth.from_spec(spec["auth"]),
         )
 
     def to_spec(self) -> dict[str, any]:
@@ -73,6 +73,6 @@ class SqlQuery(Entity):
             "name": self.name,
             "sql": self.sql,
             "envelope": self.envelope,
-            "output_event_type": self.output_event_type.to_spec(),
+            "outputEventType": self.output_event_type.to_spec(),
             "auth": self.auth.to_spec() if self.auth else {},
         }

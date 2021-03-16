@@ -32,7 +32,7 @@ class ReadOnlyAuth:
         def parse(role: str):
             return (
                 list(set(ensure_flat_list(spec[section].get(role))))
-                if spec[section]
+                if section in spec and spec[section]
                 else []
             )
 
@@ -53,8 +53,8 @@ class FullAuth(ReadOnlyAuth):
         return FullAuth(
             users=cls._parse_section(spec, "users"),
             services=cls._parse_section(spec, "services"),
-            any_token_read=spec["anyToken"].get("read", False),
-            any_token_write=spec["anyToken"].get("write", False),
+            any_token_read=spec.get("anyToken", {}).get("read", False),
+            any_token_write=spec.get("anyToken", {}).get("write", False),
         )
 
     def to_spec(self) -> dict:

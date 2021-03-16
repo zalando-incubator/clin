@@ -16,11 +16,9 @@ class ReadOnlyAuth:
 
     @classmethod
     def from_spec(cls, spec: dict) -> ReadOnlyAuth:
-        return cls(
-            users={role: cls._parse(spec, "users", role) for role in cls.get_roles()},
-            services={
-                role: cls._parse(spec, "services", role) for role in cls.get_roles()
-            },
+        return ReadOnlyAuth(
+            users=cls._parse_section(spec, "users"),
+            services=cls._parse_section(spec, "services"),
         )
 
     def to_spec(self) -> dict[str, dict[str, list[str]]]:
@@ -29,9 +27,16 @@ class ReadOnlyAuth:
             "services": {role: self.services[role] for role in self.get_roles()},
         }
 
-    @staticmethod
-    def _parse(spec: dict, key: str, role: str) -> list[str]:
-        return list(set(ensure_flat_list(spec[key].get(role)))) if spec[key] else []
+    @classmethod
+    def _parse_section(cls, spec: dict, section: str) -> dict[str, list[str]]:
+        def parse(role: str):
+            return (
+                list(set(ensure_flat_list(spec[section].get(role))))
+                if spec[section]
+                else []
+            )
+
+        return {role: parse(role) for role in cls.get_roles()}
 
 
 @dataclass
@@ -41,15 +46,13 @@ class FullAuth(ReadOnlyAuth):
 
     @classmethod
     def get_roles(cls) -> list[str]:
-        return ["admins", "writers", "readers"]
+        return ["admins", "readers", "writers"]
 
     @classmethod
     def from_spec(cls, spec: dict) -> FullAuth:
         return FullAuth(
-            users={role: cls._parse(spec, "users", role) for role in cls.get_roles()},
-            services={
-                role: cls._parse(spec, "services", role) for role in cls.get_roles()
-            },
+            users=cls._parse_section(spec, "users"),
+            services=cls._parse_section(spec, "services"),
             any_token_read=spec["anyToken"].get("read", False),
             any_token_write=spec["anyToken"].get("write", False),
         )

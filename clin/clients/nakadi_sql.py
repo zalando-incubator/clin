@@ -66,7 +66,9 @@ def output_event_type_from_payload(
         owning_application=payload.get(
             "owning_application", event_type.owning_application
         ),
-        audience=Audience(payload.get("audience", event_type.audience)),
+        audience=Audience(payload["audience"])
+        if "audience" in payload
+        else event_type.audience,
         repartitioning=convert_repartitioning(),
         cleanup=Cleanup(
             policy=Cleanup.Policy(payload["cleanup_policy"]),

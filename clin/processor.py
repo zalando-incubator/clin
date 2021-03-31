@@ -49,7 +49,7 @@ class Processor:
 
     def apply(self, env: str, envelope: Envelope):
         apply = self.apply_func_per_kind.get(envelope.kind, None)
-        if envelope.kind is None:
+        if apply is None:
             raise ProcessingError(f"Unsupported kind: {envelope.kind}")
         apply(env, envelope.spec)
 

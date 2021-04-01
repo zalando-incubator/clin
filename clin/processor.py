@@ -54,7 +54,7 @@ class Processor:
         apply(env, envelope.spec)
 
     def apply_event_type(self, env: str, spec: dict):
-        nakadi = Nakadi(self.config.environments[env].nakadi_url, self.token)
+        nakadi = self._get_nakadi(env)
         et = EventType.from_spec(spec)
 
         try:
@@ -79,8 +79,8 @@ class Processor:
             raise ProcessingError(f"Can not process {et}: {err}") from err
 
     def apply_sql_query(self, env: str, spec: dict):
-        nakadi = Nakadi(self.config.environments[env].nakadi_url, self.token)
-        nakadi_sql = NakadiSql(self.config.environments[env].nakadi_sql_url, self.token)
+        nakadi = self._get_nakadi(env)
+        nakadi_sql = self._get_nakadi_sql(env)
         query = SqlQuery.from_spec(spec)
 
         try:
@@ -119,7 +119,7 @@ class Processor:
             raise ProcessingError(f"Can not process {query}: {err}") from err
 
     def apply_subscription(self, env: str, spec: dict):
-        nakadi = Nakadi(self.config.environments[env].nakadi_url, self.token)
+        nakadi = self._get_nakadi(env)
         sub = Subscription.from_spec(spec)
 
         try:
@@ -230,6 +230,18 @@ class Processor:
             logging.info(f"{MODIFY_COLOR}⦿ Created:{Fore.RESET} %s", query)
         else:
             logging.info(f"{MODIFY_COLOR}⦿ Will create:{Fore.RESET} %s", query)
+
+    def _get_nakadi(self, env: str) -> Nakadi:
+        if env not in self.config.environments:
+            raise ProcessingError(f"Unknown environment: {env}")
+        return Nakadi(self.config.environments[env].nakadi_url, self.token)
+
+    def _get_nakadi_sql(self, env: str) -> NakadiSql:
+        if env not in self.config.environments:
+            raise ProcessingError(f"Unknown environment: {env}")
+        if not self.config.environments[env].nakadi_sql_url:
+            raise ProcessingError("Nakadi SQL endpoint is not configured")
+        return NakadiSql(self.config.environments[env].nakadi_url, self.token)
 
 
 class ProcessingError(Exception):

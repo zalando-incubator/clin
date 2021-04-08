@@ -1,30 +1,43 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from clin.utils import ensure_flat_list
 
 
 @dataclass
-class ReadOnlyAuth:
+class Auth(ABC):
     users: dict[str, list[str]]
     services: dict[str, list[str]]
+    any_token: dict[str, bool]
 
     @classmethod
+    @abstractmethod
     def get_roles(cls) -> list[str]:
-        return ["admins", "readers"]
+        pass
 
     @classmethod
-    def from_spec(cls, spec: dict) -> ReadOnlyAuth:
-        return ReadOnlyAuth(
+    @abstractmethod
+    def get_any_token_values(cls) -> list[str]:
+        pass
+
+    @classmethod
+    def from_spec(cls, spec: dict) -> Auth:
+        return cls(
             users=cls._parse_section(spec, "users"),
             services=cls._parse_section(spec, "services"),
+            any_token=cls._parse_any_token(spec),
         )
 
     def to_spec(self) -> dict[str, dict[str, list[str]]]:
         return {
             "users": {role: self.users[role] for role in self.get_roles()},
             "services": {role: self.services[role] for role in self.get_roles()},
+            "anyToken": {
+                role: self.any_token.get(role, False)
+                for role in self.get_any_token_values()
+            },
         }
 
     @classmethod
@@ -38,30 +51,31 @@ class ReadOnlyAuth:
 
         return {role: parse(role) for role in cls.get_roles()}
 
+    @classmethod
+    def _parse_any_token(cls, spec: dict) -> dict[str, bool]:
+        return {
+            role: spec.get("anyToken", {}).get(role, False)
+            for role in cls.get_any_token_values()
+        }
+
 
 @dataclass
-class FullAuth(ReadOnlyAuth):
-    any_token_read: bool
-    any_token_write: bool
+class ReadOnlyAuth(Auth):
+    @classmethod
+    def get_roles(cls) -> list[str]:
+        return ["admins", "readers"]
 
+    @classmethod
+    def get_any_token_values(cls) -> list[str]:
+        return ["read"]
+
+
+@dataclass
+class ReadWriteAuth(Auth):
     @classmethod
     def get_roles(cls) -> list[str]:
         return ["admins", "readers", "writers"]
 
     @classmethod
-    def from_spec(cls, spec: dict) -> FullAuth:
-        return FullAuth(
-            users=cls._parse_section(spec, "users"),
-            services=cls._parse_section(spec, "services"),
-            any_token_read=spec.get("anyToken", {}).get("read", False),
-            any_token_write=spec.get("anyToken", {}).get("write", False),
-        )
-
-    def to_spec(self) -> dict:
-        return {
-            **super().to_spec(),
-            "anyToken": {
-                "read": self.any_token_read,
-                "write": self.any_token_write,
-            },
-        }
+    def get_any_token_values(cls) -> list[str]:
+        return ["read", "write"]

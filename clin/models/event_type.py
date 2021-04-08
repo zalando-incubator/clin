@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from colorama import Fore
 
-from clin.models.auth import FullAuth
+from clin.models.auth import ReadWriteAuth
 from clin.models.shared import (
     Cleanup,
     Category,
@@ -25,7 +25,7 @@ class EventType(Entity):
     partitioning: Partitioning
     cleanup: Cleanup
     schema: Schema
-    auth: FullAuth
+    auth: ReadWriteAuth
 
     def __str__(self) -> str:
         return f"event type {Fore.BLUE}{self.name}{Fore.RESET}"
@@ -44,7 +44,7 @@ class EventType(Entity):
             partitioning=Partitioning.from_spec(spec["partitioning"]),
             cleanup=Cleanup.from_spec(spec["cleanup"]),
             schema=Schema.from_spec(spec["schema"]),
-            auth=FullAuth.from_spec(spec["auth"]),
+            auth=ReadWriteAuth.from_spec(spec["auth"]),
         )
 
     def to_spec(self) -> dict[str, any]:

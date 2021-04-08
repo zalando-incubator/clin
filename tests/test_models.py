@@ -1,7 +1,7 @@
 import pytest
 import yaml
 
-from clin.models.auth import FullAuth, ReadOnlyAuth
+from clin.models.auth import ReadWriteAuth, ReadOnlyAuth
 from clin.models.shared import Kind, Envelope
 
 
@@ -44,7 +44,7 @@ auth:
 
 def test_loads_full_auth_as_flat_lists_without_duplicates():
     spec = yaml.safe_load(yml)
-    auth = FullAuth.from_spec(spec["auth"])
+    auth = ReadWriteAuth.from_spec(spec["auth"])
 
     assert auth.users["admins"] == ["hammond"]
     assert set(auth.users["writers"]) == {"o'neill", "carter", "jackson", "teal'c"}
@@ -56,8 +56,8 @@ def test_loads_full_auth_as_flat_lists_without_duplicates():
     assert set(auth.services["writers"]) == {"one", "two", "three", "four", "five", "six"}
     assert auth.services["readers"] == []
 
-    assert auth.any_token_write is True
-    assert auth.any_token_read is True
+    assert auth.any_token["write"] is True
+    assert auth.any_token["read"] is True
 
 
 def test_loads_readonly_auth_as_flat_lists_without_duplicates():
@@ -71,8 +71,11 @@ def test_loads_readonly_auth_as_flat_lists_without_duplicates():
     assert set(auth.services["admins"]) == {"one", "two"}
     assert auth.services["readers"] == []
 
+    assert auth.any_token["read"] is True
+
     assert "writers" not in auth.users
     assert "writers" not in auth.services
+    assert "write" not in auth.any_token
 
 
 @pytest.mark.parametrize("kind_spec,expected_kind", [

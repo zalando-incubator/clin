@@ -13,7 +13,7 @@ from clin.clients.nakadi import (
 )
 from clin.clients.nakadi_sql import NakadiSql, sql_query_to_payload
 from clin.config import AppConfig
-from clin.models.auth import FullAuth, ReadOnlyAuth
+from clin.models.auth import ReadWriteAuth, ReadOnlyAuth
 from clin.models.event_type import EventType
 from clin.models.shared import Kind, Envelope, Entity
 from clin.models.sql_query import SqlQuery
@@ -155,7 +155,7 @@ class Processor:
                 diff.to_json(
                     default_mapping={
                         ReadOnlyAuth: convert_to_spec,
-                        FullAuth: convert_to_spec,
+                        ReadWriteAuth: convert_to_spec,
                         EventType: convert_to_spec,
                         SqlQuery: convert_to_spec,
                         Subscription: convert_to_spec,
@@ -241,7 +241,7 @@ class Processor:
             raise ProcessingError(f"Unknown environment: {env}")
         if not self.config.environments[env].nakadi_sql_url:
             raise ProcessingError("Nakadi SQL endpoint is not configured")
-        return NakadiSql(self.config.environments[env].nakadi_url, self.token)
+        return NakadiSql(self.config.environments[env].nakadi_sql_url, self.token)
 
 
 class ProcessingError(Exception):

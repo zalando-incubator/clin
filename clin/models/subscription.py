@@ -6,7 +6,7 @@ from uuid import UUID
 
 from colorama import Fore
 
-from clin.models.auth import FullAuth
+from clin.models.auth import ReadWriteAuth
 from clin.models.shared import Kind, Entity
 
 
@@ -16,7 +16,7 @@ class Subscription(Entity):
     owning_application: str
     event_types: list[str]
     consumer_group: str
-    auth: FullAuth
+    auth: ReadWriteAuth
 
     def __str__(self) -> str:
         prefix = f"subscription"
@@ -35,7 +35,7 @@ class Subscription(Entity):
             owning_application=spec["owningApplication"],
             event_types=spec["eventTypes"],
             consumer_group=spec["consumerGroup"],
-            auth=FullAuth.from_spec(spec["auth"]),
+            auth=ReadWriteAuth.from_spec(spec["auth"]),
         )
 
     @staticmethod

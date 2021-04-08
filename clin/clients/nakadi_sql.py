@@ -4,8 +4,7 @@ from typing import Optional
 from requests import HTTPError
 
 from clin.clients.nakadi import NakadiError
-from clin.clients.http_client import HttpClient
-from clin.models.auth import ReadOnlyAuth
+from clin.clients.http_client import HttpClient, ro_auth_from_payload, auth_to_payload
 from clin.models.event_type import EventType
 from clin.models.sql_query import SqlQuery, OutputEventType
 from clin.models.shared import Category, Cleanup, Audience, Partitioning
@@ -91,7 +90,7 @@ def sql_query_from_payload(event_type: EventType, payload: dict) -> SqlQuery:
         output_event_type=output_event_type_from_payload(
             event_type, payload["output_event_type"]
         ),
-        auth=auth_from_payload(payload["authorization"]),
+        auth=ro_auth_from_payload(payload["authorization"]),
     )
 
 
@@ -122,32 +121,3 @@ def sql_query_to_payload(sql_query: SqlQuery) -> dict:
         }
 
     return payload
-
-
-def auth_to_payload(auth: ReadOnlyAuth) -> dict:
-    def parse(role: str):
-        def el(key: str):
-            return [
-                {"data_type": key, "value": x} for x in getattr(auth, key + "s")[role]
-            ]
-
-        return el("user") + el("service")
-
-    return {role: parse(role) for role in auth.get_roles()}
-
-
-def auth_from_payload(payload: dict) -> Optional[ReadOnlyAuth]:
-    if not payload:
-        return None
-
-    auth = ReadOnlyAuth({}, {})
-    for role in ReadOnlyAuth.get_roles():
-        auth.users[role] = []
-        auth.services[role] = []
-        for el in payload.get(role, []):
-            if el["data_type"] == "user":
-                auth.users[role].append(el["value"])
-            if el["data_type"] == "service":
-                auth.services[role].append(el["value"])
-
-    return auth

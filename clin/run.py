@@ -11,6 +11,7 @@ from clin.clients.nakadi_sql import NakadiSql
 from clin.clinfile import calculate_scope
 from clin.config import ConfigurationError, load_config
 from clin.clients.nakadi import Nakadi, NakadiError
+from clin.models.shared import Kind
 from clin.processor import Processor, ProcessingError
 from clin.utils import configure_logging, pretty_yaml, pretty_json
 from clin.yamlops import YamlLoader, load_manifest, load_yaml, YamlError
@@ -169,8 +170,10 @@ def process(
         file_path: Path = Path(file)
         master = load_yaml(file_path, DEFAULT_YAML_LOADER, os.environ)
 
-        for task in calculate_scope(
-            master, file_path.parent, DEFAULT_YAML_LOADER, id, env
+        scope = calculate_scope(master, file_path.parent, DEFAULT_YAML_LOADER, id, env)
+
+        for task in (
+            scope[Kind.EVENT_TYPE] + scope[Kind.SQL_QUERY] + scope[Kind.SUBSCRIPTION]
         ):
             logging.debug(
                 "[%s] applying file %s to %s environment",

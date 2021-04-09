@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
-from typing import List, Tuple
 
-from clin.models.shared import Envelope
+from clin.models.shared import Envelope, Kind
 from clin.yamlops import YamlLoader
 
 
@@ -20,14 +21,14 @@ def calculate_scope(
     master: dict,
     base_path: Path,
     loader: YamlLoader,
-    filter_id: Tuple[str],
-    filter_env: Tuple[str],
-) -> List[Process]:
+    filter_id: tuple[str],
+    filter_env: tuple[str],
+) -> dict[Kind, list[Process]]:
     processes = master.get("process")
     if not processes:
         raise Exception("'process' section is not found")
 
-    scope = []
+    scope = {kind: [] for kind in Kind}
     for proc in processes:
         if len(filter_id) > 0 and proc["id"] not in filter_id:
             continue
@@ -54,7 +55,7 @@ def calculate_scope(
         for manifest_file in manifests_files:
             manifest = loader.load_yaml_from_file(manifest_file, proc.get("env", {}))
             envelope = Envelope.from_manifest(manifest)
-            scope.append(
+            scope[envelope.kind].append(
                 Process(
                     id=proc_id,
                     path=manifest_file,

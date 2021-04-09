@@ -1,0 +1,25 @@
+kind: sql-query
+spec:
+  name: {{TEAM}}.zalandify.query{{POSTFIX}}
+  sql: |
+    SELECT *
+    FROM "{{TEAM}}.zalandify.input{{POSTFIX}}" AS e
+    WHERE e."text" <> ''
+  envelope: false
+  outputEventType:
+    category: business
+    owningApplication: stups_zalandify
+    audience: company-internal
+    cleanup:
+      policy: delete
+      retentionTimeDays: 2
+  auth:
+    users:
+      admins: {{ADMINS}}
+      readers:
+    services:
+      admins:
+      readers:
+        - stups_zalandify
+    anyToken:
+      read: {{ANY_READ}}

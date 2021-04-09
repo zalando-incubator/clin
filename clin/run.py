@@ -7,9 +7,11 @@ from typing import Tuple, Optional
 import click
 
 from clin import __version__
+from clin.clients.nakadi_sql import NakadiSql
 from clin.clinfile import calculate_scope
 from clin.config import ConfigurationError, load_config
-from clin.nakadi import Nakadi, NakadiError
+from clin.clients.nakadi import Nakadi, NakadiError
+from clin.models.shared import Kind
 from clin.processor import Processor, ProcessingError
 from clin.utils import configure_logging, pretty_yaml, pretty_json
 from clin.yamlops import YamlLoader, load_manifest, load_yaml, YamlError
@@ -83,9 +85,9 @@ def apply(
 
     try:
         config = load_config()
-        kind, spec = load_manifest(Path(file), DEFAULT_YAML_LOADER, os.environ)
+        envelope = load_manifest(Path(file), DEFAULT_YAML_LOADER, os.environ)
         processor = Processor(config, token, execute, show_diff, show_payload)
-        processor.apply(env, kind, spec)
+        processor.apply(env, envelope)
 
     except (ProcessingError, NakadiError, ConfigurationError, YamlError) as ex:
         logging.error(ex)
@@ -167,18 +169,19 @@ def process(
         processor = Processor(config, token, execute, show_diff, show_payload)
         file_path: Path = Path(file)
         master = load_yaml(file_path, DEFAULT_YAML_LOADER, os.environ)
-        scope = calculate_scope(master, file_path.parent, DEFAULT_YAML_LOADER, id, env)
-        event_types = [et for et in scope if et.kind == "event-type"]
-        subscriptions = [sub for sub in scope if sub.kind == "subscription"]
 
-        for task in event_types + subscriptions:
+        scope = calculate_scope(master, file_path.parent, DEFAULT_YAML_LOADER, id, env)
+
+        for task in (
+            scope[Kind.EVENT_TYPE] + scope[Kind.SQL_QUERY] + scope[Kind.SUBSCRIPTION]
+        ):
             logging.debug(
                 "[%s] applying file %s to %s environment",
                 task.id,
                 task.path,
                 task.target,
             )
-            processor.apply(task.target, task.kind, task.spec)
+            processor.apply(task.target, task.envelope)
 
     except (ProcessingError, ConfigurationError, YamlError) as ex:
         logging.error(ex)
@@ -243,24 +246,24 @@ def dump(
             exit(-1)
 
         nakadi = Nakadi(config.environments[env].nakadi_url, token)
-        et = nakadi.get_event_type(event_type)
-        if not et:
+        entity = nakadi.get_event_type(event_type)
+
+        if entity and config.environments[env].nakadi_sql_url:
+            nakadi_sql = NakadiSql(config.environments[env].nakadi_sql_url, token)
+            entity = nakadi_sql.get_sql_query(entity) or entity
+
+        if entity is None:
             logging.error("Event type not found in Nakadi %s: %s", env, event_type)
             exit(-1)
 
-        et_output = (
-            et.to_spec()
-            if not include_envelope
-            else {
-                "kind": "event-type",
-                "spec": et.to_spec(),
-            }
+        payload = (
+            entity.to_envelope().to_manifest() if include_envelope else entity.to_spec()
         )
 
         if output.lower() == "yaml":
-            logging.info(pretty_yaml(et_output))
+            logging.info(pretty_yaml(payload))
         elif output.lower() == "json":
-            logging.info(pretty_json(et_output))
+            logging.info(pretty_json(payload))
         else:
             logging.error("Invalid output format: %s", output)
             exit(-1)

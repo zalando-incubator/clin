@@ -4,8 +4,14 @@ import json
 from typing import List, Optional
 
 import requests
+from requests import HTTPError, Response
 
-from clin.models.auth import Auth, AllowedTenants
+from clin.clients.http_client import (
+    HttpClient,
+    rw_auth_from_payload,
+    ro_auth_from_payload,
+    auth_to_payload,
+)
 from clin.models.event_type import (
     EventType,
     Category,
@@ -18,40 +24,32 @@ from clin.models.subscription import Subscription
 from clin.utils import MS_IN_DAY
 
 
-class Nakadi:
-    def __init__(self, base_url: str, token: Optional[str]):
-        self._base_url = base_url.rstrip("/")
-        self._headers = {"Content-Type": "application/json", "User-Agent": "clin"}
-
-        if token:
-            self._headers["Authorization"] = f"Bearer {token}"
-
+class Nakadi(HttpClient):
     def get_event_type(self, name: str) -> Optional[EventType]:
-        url = f"{self._base_url}/event-types/{name}"
-        resp = requests.get(url, headers=self._headers)
-        if resp.status_code == 200:
-            payload = resp.json()
+        try:
+            payload = self._get(f"event-types/{name}")
             partition_count = self.get_partition_count(name)
             return event_type_from_payload(payload, partition_count)
-        elif resp.status_code == 404:
-            return None
-        else:
-            raise NakadiError(f"Nakadi error during getting event type '{name}'", resp)
+
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            raise NakadiError(
+                f"Nakadi error during getting event type '{name}'", e.response
+            )
 
     def get_partition_count(self, name: str) -> int:
-        url = f"{self._base_url}/event-types/{name}/partitions"
-        resp = requests.get(url, headers=self._headers)
-        cursors = []
-        if resp.status_code == 200:
-            cursors = resp.json()
-        if not cursors:
-            raise NakadiError(f"Can not get partitions for event type'{name}'", resp)
-        return len(cursors)
+        try:
+            return len(self._get(f"event-types/{name}/partitions"))
+
+        except HTTPError as e:
+            raise NakadiError(
+                f"Can not get partitions for event type'{name}'", e.response
+            )
 
     def create_event_type(self, event_type: EventType):
-        payload = json.dumps(event_type_to_payload(event_type))
-        resp = requests.post(
-            f"{self._base_url}/event-types", headers=self._headers, data=payload
+        resp = self._post(
+            "event-types", data=json.dumps(event_type_to_payload(event_type))
         )
         if resp.status_code != 201:
             raise NakadiError(
@@ -59,11 +57,9 @@ class Nakadi:
             )
 
     def update_event_type(self, event_type: EventType):
-        payload = json.dumps(event_type_to_payload(event_type))
-        resp = requests.put(
-            f"{self._base_url}/event-types/{event_type.name}",
-            headers=self._headers,
-            data=payload,
+        resp = self._put(
+            f"event-types/{event_type.name}",
+            data=json.dumps(event_type_to_payload(event_type)),
         )
         if resp.status_code != 200:
             raise NakadiError(
@@ -123,64 +119,26 @@ class Nakadi:
 
 
 class NakadiError(Exception):
-    def __init__(self, message: str, response: requests.Response):
+    def __init__(self, message: str, response: Response):
         self.response = response
         self._message = message
 
     def __str__(self):
         code = self.response.status_code
         msg = f"{self._message}: {code}"
-        if code // 100 == 2:
-            msg += f" - {self.response.json()}"
-        elif code // 100 >= 4:
-            problem = self.response.json()
-            msg += f" - {problem['detail']}"
-        else:
-            msg += ": " + self.response.text
-        return msg
 
+        try:
+            body = self.response.json()
+            if "problem" in body:
+                return msg + " - " + body["problem"]["detail"]
+            else:
+                return msg + " - " + body
 
-def _auth_to_payload(a: Auth) -> dict:
-    any_token_write = [{"data_type": "*", "value": "*"}] if a.any_token_write else []
-    any_token_read = [{"data_type": "*", "value": "*"}] if a.any_token_read else []
-    return {
-        "admins": [{"data_type": "user", "value": user} for user in a.users.admins]
-        + [{"data_type": "service", "value": service} for service in a.services.admins],
-        "writers": [{"data_type": "user", "value": user} for user in a.users.writers]
-        + [{"data_type": "service", "value": service} for service in a.services.writers]
-        + any_token_write,
-        "readers": [{"data_type": "user", "value": user} for user in a.users.readers]
-        + [{"data_type": "service", "value": service} for service in a.services.readers]
-        + any_token_read,
-    }
-
-
-def _auth_from_payload(payload: dict) -> Optional[Auth]:
-    if not payload:
-        return None
-
-    auth = Auth(AllowedTenants([], [], []), AllowedTenants([], [], []), False, False)
-    for admin in payload.get("admins", []):
-        if admin["data_type"] == "user":
-            auth.users.admins.append(admin["value"])
-        if admin["data_type"] == "service":
-            auth.services.admins.append(admin["value"])
-    for writer in payload.get("writers", []):
-        if writer["data_type"] == "user":
-            auth.users.writers.append(writer["value"])
-        if writer["data_type"] == "service":
-            auth.services.writers.append(writer["value"])
-        if writer["data_type"] == "*":
-            auth.any_token_write = True
-    for reader in payload.get("readers", []):
-        if reader["data_type"] == "user":
-            auth.users.readers.append(reader["value"])
-        if reader["data_type"] == "service":
-            auth.services.readers.append(reader["value"])
-        if reader["data_type"] == "*":
-            auth.any_token_read = True
-
-    return auth
+        except Exception:
+            if self.response.text:
+                return msg + " - " + self.response.text
+            else:
+                return msg
 
 
 def event_type_to_payload(event_type: EventType) -> dict:
@@ -190,9 +148,9 @@ def event_type_to_payload(event_type: EventType) -> dict:
     return {
         "name": event_type.name,
         "owning_application": event_type.owning_application,
-        "category": event_type.category,
-        "audience": event_type.audience,
-        "partition_strategy": event_type.partitioning.strategy,
+        "category": str(event_type.category),
+        "audience": str(event_type.audience),
+        "partition_strategy": str(event_type.partitioning.strategy),
         "partition_key_fields": event_type.partitioning.keys,
         "default_statistic": {
             "messages_per_minute": 100,
@@ -210,7 +168,7 @@ def event_type_to_payload(event_type: EventType) -> dict:
             "version": "1.0.0",
             "schema": json.dumps(event_type.schema.json_schema),
         },
-        "authorization": _auth_to_payload(event_type.auth),
+        "authorization": auth_to_payload(event_type.auth),
         "enrichment_strategies": enrichment_strategies,
     }
 
@@ -220,7 +178,7 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
         name=payload["name"],
         category=Category(payload["category"]),
         owning_application=payload["owning_application"],
-        audience=Audience(payload["audience"]) if payload.get("audience") else None,
+        audience=Audience(payload["audience"]) if "audience" in payload else None,
         partitioning=Partitioning(
             strategy=Partitioning.Strategy(payload["partition_strategy"]),
             keys=payload.get("partition_key_fields"),
@@ -235,7 +193,7 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
             compatibility=Schema.Compatibility(payload["compatibility_mode"]),
             json_schema=json.loads(payload["schema"]["schema"]),
         ),
-        auth=_auth_from_payload(payload["authorization"]),
+        auth=rw_auth_from_payload(payload["authorization"]),
     )
 
 
@@ -246,7 +204,7 @@ def subscription_to_payload(subscription: Subscription) -> dict:
         "consumer_group": subscription.consumer_group,
         "initial_cursors": [],
         "read_from": "end",
-        "authorization": _auth_to_payload(subscription.auth),
+        "authorization": auth_to_payload(subscription.auth),
     }
 
 
@@ -256,5 +214,5 @@ def subscription_from_payload(payload: dict) -> Subscription:
         owning_application=payload["owning_application"],
         event_types=payload["event_types"],
         consumer_group=payload["consumer_group"],
-        auth=_auth_from_payload(payload["authorization"]),
+        auth=ro_auth_from_payload(payload["authorization"]),
     )

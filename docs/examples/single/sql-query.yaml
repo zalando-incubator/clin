@@ -1,0 +1,28 @@
+kind: sql-query
+spec:
+  name: derokhin.clin.test-query # query name - if it already exists, it will be updated
+  sql: |
+    SELECT *
+    FROM "derokhin.clin.test" AS e
+    WHERE e."important_key" = 'hello world'
+  envelope: false
+  outputEventType:
+    category: business # business | data | undefined
+    owningApplication: stups_your-application # application kio id with "stups_" prefix
+    audience: component-internal # component-internal | business-unit-internal | company-internal | external-partner | external-public
+    cleanup:
+      policy: delete
+      retentionTimeDays: 2
+  auth:
+    users:
+      admins:
+      - dstockhammer
+      readers:
+      - dstockhammer
+      - derokhin
+    services:
+      admins:
+      readers:
+        - stups_your-application
+    anyToken:
+      read: false

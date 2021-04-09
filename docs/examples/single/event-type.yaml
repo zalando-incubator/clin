@@ -1,7 +1,7 @@
 kind: event-type
 spec:
-  name: derokhin.clin.test # Event type name. If already exists, it will be updated
-  category: business  #  business | data | undefined
+  name: derokhin.clin.test # event type name - if it already exists, it will be updated
+  category: business # business | data | undefined
   owningApplication: stups_your-application # application kio id with "stups_" prefix
   audience: component-internal # component-internal | business-unit-internal | company-internal | external-partner | external-public
   partitioning:

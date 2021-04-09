@@ -1,72 +1,81 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Union
 
 from clin.utils import ensure_flat_list
 
 
 @dataclass
-class AllowedTenants:
-    admins: List[str]
-    writers: List[str]
-    readers: List[str]
+class Auth(ABC):
+    users: dict[str, list[str]]
+    services: dict[str, list[str]]
+    any_token: dict[str, bool]
+
+    @classmethod
+    @abstractmethod
+    def get_roles(cls) -> list[str]:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get_any_token_values(cls) -> list[str]:
+        pass
+
+    @classmethod
+    def from_spec(cls, spec: dict) -> Auth:
+        return cls(
+            users=cls._parse_section(spec, "users"),
+            services=cls._parse_section(spec, "services"),
+            any_token=cls._parse_any_token(spec),
+        )
+
+    def to_spec(self) -> dict[str, dict[str, list[str]]]:
+        return {
+            "users": {role: self.users[role] for role in self.get_roles()},
+            "services": {role: self.services[role] for role in self.get_roles()},
+            "anyToken": {
+                role: self.any_token.get(role, False)
+                for role in self.get_any_token_values()
+            },
+        }
+
+    @classmethod
+    def _parse_section(cls, spec: dict, section: str) -> dict[str, list[str]]:
+        def parse(role: str):
+            return (
+                list(set(ensure_flat_list(spec[section].get(role))))
+                if section in spec and spec[section]
+                else []
+            )
+
+        return {role: parse(role) for role in cls.get_roles()}
+
+    @classmethod
+    def _parse_any_token(cls, spec: dict) -> dict[str, bool]:
+        return {
+            role: spec.get("anyToken", {}).get(role, False)
+            for role in cls.get_any_token_values()
+        }
 
 
 @dataclass
-class Auth:
-    users: AllowedTenants
-    services: AllowedTenants
-    any_token_read: bool
-    any_token_write: bool
+class ReadOnlyAuth(Auth):
+    @classmethod
+    def get_roles(cls) -> list[str]:
+        return ["admins", "readers"]
 
-    @staticmethod
-    def from_spec(
-        spec: Dict[str, Dict[str, Optional[List[Union[str, List[str]]]]]]
-    ) -> Auth:
-        def users(role: str) -> List[str]:
-            return (
-                list(set(ensure_flat_list(spec["users"].get(role))))
-                if spec["users"]
-                else []
-            )
+    @classmethod
+    def get_any_token_values(cls) -> list[str]:
+        return ["read"]
 
-        def services(role: str) -> List[str]:
-            return (
-                list(set(ensure_flat_list(spec["services"].get(role))))
-                if spec["services"]
-                else []
-            )
 
-        return Auth(
-            users=AllowedTenants(
-                admins=users("admins"),
-                writers=users("writers"),
-                readers=users("readers"),
-            ),
-            services=AllowedTenants(
-                admins=services("admins"),
-                writers=services("writers"),
-                readers=services("readers"),
-            ),
-            any_token_read=spec["anyToken"].get("read", False),
-            any_token_write=spec["anyToken"].get("write", False),
-        )
+@dataclass
+class ReadWriteAuth(Auth):
+    @classmethod
+    def get_roles(cls) -> list[str]:
+        return ["admins", "readers", "writers"]
 
-    def to_spec(self) -> dict:
-        return {
-            "users": {
-                "admins": self.users.admins,
-                "readers": self.users.readers,
-                "writers": self.users.writers,
-            },
-            "services": {
-                "admins": self.services.admins,
-                "readers": self.services.readers,
-                "writers": self.services.writers,
-            },
-            "anyToken": {
-                "read": self.any_token_read,
-                "write": self.any_token_write,
-            },
-        }
+    @classmethod
+    def get_any_token_values(cls) -> list[str]:
+        return ["read", "write"]

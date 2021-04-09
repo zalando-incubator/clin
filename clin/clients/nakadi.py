@@ -6,7 +6,12 @@ from typing import List, Optional
 import requests
 from requests import HTTPError, Response
 
-from clin.clients.http_client import HttpClient, rw_auth_from_payload, auth_to_payload
+from clin.clients.http_client import (
+    HttpClient,
+    rw_auth_from_payload,
+    ro_auth_from_payload,
+    auth_to_payload,
+)
 from clin.models.event_type import (
     EventType,
     Category,
@@ -209,5 +214,5 @@ def subscription_from_payload(payload: dict) -> Subscription:
         owning_application=payload["owning_application"],
         event_types=payload["event_types"],
         consumer_group=payload["consumer_group"],
-        auth=auth_from_payload(payload["authorization"]),
+        auth=ro_auth_from_payload(payload["authorization"]),
     )

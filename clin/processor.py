@@ -83,6 +83,12 @@ class Processor:
         nakadi_sql = self._get_nakadi_sql(env)
         query = SqlQuery.from_spec(spec)
 
+        def is_allowed_sql_change(diff: dict):
+            for k in diff.get("values_changed", {}).keys():
+                if "auth" not in k:
+                    return False
+            return True
+
         try:
             current_et = nakadi.get_event_type(query.name)
             current = nakadi_sql.get_sql_query(current_et) if current_et else None
@@ -95,7 +101,8 @@ class Processor:
                 if diff:
                     self._maybe_print_diff(query, diff)
 
-                    if "values_changed" in diff:
+                    if not is_allowed_sql_change(diff):
+
                         logging.info(
                             f"{ERROR_COLOR}× Modifying output event type is forbidden:{Fore.RESET} %s",
                             query,

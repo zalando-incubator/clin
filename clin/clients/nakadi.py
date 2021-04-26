@@ -59,7 +59,9 @@ class Nakadi(HttpClient):
     def update_event_type(self, event_type: EventType):
         resp = self._put(
             f"event-types/{event_type.name}",
-            data=json.dumps(event_type_to_payload(event_type)),
+            data=json.dumps(
+                event_type_to_payload(event_type, include_statistics=False)
+            ),
         )
         if resp.status_code != 200:
             raise NakadiError(
@@ -141,23 +143,27 @@ class NakadiError(Exception):
                 return msg
 
 
-def event_type_to_payload(event_type: EventType) -> dict:
+def event_type_to_payload(
+    event_type: EventType, include_statistics: bool = True
+) -> dict:
     enrichment_strategies = (
         [] if event_type.category == Category.UNDEFINED else ["metadata_enrichment"]
     )
-    return {
-        "name": event_type.name,
-        "owning_application": event_type.owning_application,
-        "category": str(event_type.category),
-        "audience": str(event_type.audience),
-        "partition_strategy": str(event_type.partitioning.strategy),
-        "partition_key_fields": event_type.partitioning.keys,
+    default_statistic_part = {
         "default_statistic": {
             "messages_per_minute": 100,
             "message_size": 100,
             "read_parallelism": event_type.partitioning.partition_count,
             "write_parallelism": event_type.partitioning.partition_count,
         },
+    }
+    payload = {
+        "name": event_type.name,
+        "owning_application": event_type.owning_application,
+        "category": str(event_type.category),
+        "audience": str(event_type.audience),
+        "partition_strategy": str(event_type.partitioning.strategy),
+        "partition_key_fields": event_type.partitioning.keys,
         "cleanup_policy": event_type.cleanup.policy,
         "options": {
             "retention_time": event_type.cleanup.retention_time_days * MS_IN_DAY
@@ -171,6 +177,9 @@ def event_type_to_payload(event_type: EventType) -> dict:
         "authorization": auth_to_payload(event_type.auth),
         "enrichment_strategies": enrichment_strategies,
     }
+    if include_statistics:
+        payload.update(default_statistic_part)
+    return payload
 
 
 def event_type_from_payload(payload: dict, partition_count: int) -> EventType:

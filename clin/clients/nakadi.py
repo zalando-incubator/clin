@@ -59,7 +59,9 @@ class Nakadi(HttpClient):
     def update_event_type(self, event_type: EventType):
         resp = self._put(
             f"event-types/{event_type.name}",
-            data=json.dumps(event_type_to_payload(event_type, include_statistics=False)),
+            data=json.dumps(
+                event_type_to_payload(event_type, include_statistics=False)
+            ),
         )
         if resp.status_code != 200:
             raise NakadiError(
@@ -67,7 +69,7 @@ class Nakadi(HttpClient):
             )
 
     def get_subscription(
-            self, event_types: List, owning_application: str, consumer_group: str
+        self, event_types: List, owning_application: str, consumer_group: str
     ) -> Optional[Subscription]:
         params_str = Subscription.components_string(
             event_types, owning_application, consumer_group
@@ -141,7 +143,9 @@ class NakadiError(Exception):
                 return msg
 
 
-def event_type_to_payload(event_type: EventType, include_statistics: bool = True) -> dict:
+def event_type_to_payload(
+    event_type: EventType, include_statistics: bool = True
+) -> dict:
     enrichment_strategies = (
         [] if event_type.category == Category.UNDEFINED else ["metadata_enrichment"]
     )
@@ -160,7 +164,6 @@ def event_type_to_payload(event_type: EventType, include_statistics: bool = True
         "audience": str(event_type.audience),
         "partition_strategy": str(event_type.partitioning.strategy),
         "partition_key_fields": event_type.partitioning.keys,
-
         "cleanup_policy": event_type.cleanup.policy,
         "options": {
             "retention_time": event_type.cleanup.retention_time_days * MS_IN_DAY
@@ -193,7 +196,7 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
         cleanup=Cleanup(
             policy=Cleanup.Policy(payload["cleanup_policy"]),
             retention_time_days=payload["options"].get("retention_time", 0)
-                                // MS_IN_DAY,
+            // MS_IN_DAY,
         ),
         schema=Schema(
             compatibility=Schema.Compatibility(payload["compatibility_mode"]),

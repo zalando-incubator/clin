@@ -26,14 +26,14 @@ python = "^3.7"
 requests = "^2.23"
 pyyaml = "^5.4"
 click = "^7.1"
-deepdiff = "^5.2"
+deepdiff = "^5.3"
 pygments = "^2.6"
 colorama = "^0.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
 toml = "^0.10.0"
-black = "^20.8b1"
+black = "^21.4b0"
 
 [tool.poetry.scripts]
 clin = "clin.run:cli"

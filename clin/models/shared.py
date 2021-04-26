@@ -79,14 +79,14 @@ class Partitioning:
             return str(self.value)
 
     strategy: Strategy
-    keys: Optional[list[str]]
+    keys: list[str]
     partition_count: int
 
     @staticmethod
     def from_spec(spec: dict[str, any]) -> Partitioning:
         return Partitioning(
             strategy=Partitioning.Strategy(spec["strategy"]),
-            keys=spec.get("keys"),
+            keys=spec.get("keys", []),
             partition_count=spec["partitionCount"],
         )
 

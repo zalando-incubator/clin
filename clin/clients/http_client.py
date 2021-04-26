@@ -63,11 +63,13 @@ def auth_to_payload(auth: Auth) -> dict:
 
 
 def ro_auth_from_payload(payload: dict) -> Optional[ReadOnlyAuth]:
-    return _auth_from_payload(ReadOnlyAuth({}, {}, {}), payload)
+    return _auth_from_payload(ReadOnlyAuth({}, {}, {"read": False}), payload)
 
 
 def rw_auth_from_payload(payload: dict) -> Optional[ReadWriteAuth]:
-    return _auth_from_payload(ReadWriteAuth({}, {}, {}), payload)
+    return _auth_from_payload(
+        ReadWriteAuth({}, {}, {"read": False, "write": False}), payload
+    )
 
 
 def _auth_from_payload(auth: TAuth, payload: dict) -> Optional[TAuth]:

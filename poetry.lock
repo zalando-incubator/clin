@@ -30,7 +30,7 @@ tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>
 
 [[package]]
 name = "black"
-version = "21.4b1"
+version = "21.4b2"
 description = "The uncompromising code formatter."
 category = "dev"
 optional = false
@@ -310,7 +310,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "f01f345591cbd2bb2d7a5f0aaabc253fbe209067141dd64e2009513dcba352aa"
+content-hash = "94f37aa9508cbf1a6580a0cf0173b1b6531b60c100a40b4d05b782472a7b03f7"
 
 [metadata.files]
 appdirs = [
@@ -326,8 +326,8 @@ attrs = [
     {file = "attrs-20.3.0.tar.gz", hash = "sha256:832aa3cde19744e49938b91fea06d69ecb9e649c93ba974535d08ad92164f700"},
 ]
 black = [
-    {file = "black-21.4b1-py3-none-any.whl", hash = "sha256:c9601dc863779db2fb1bf18b345bbfa2bb868463123cde6a7eff44b59e4ef739"},
-    {file = "black-21.4b1.tar.gz", hash = "sha256:20d326de75d13be6290925a95c94a9f368aca2f71cb7b753a938a5ae20f34a37"},
+    {file = "black-21.4b2-py3-none-any.whl", hash = "sha256:bff7067d8bc25eb21dcfdbc8c72f2baafd9ec6de4663241a52fb904b304d391f"},
+    {file = "black-21.4b2.tar.gz", hash = "sha256:fc9bcf3b482b05c1f35f6a882c079dc01b9c7795827532f4cc43c0ec88067bbc"},
 ]
 certifi = [
     {file = "certifi-2020.12.5-py2.py3-none-any.whl", hash = "sha256:719a74fb9e33b9bd44cc7f3a8d94bc35e4049deebe19ba7d8e108280cfd59830"},

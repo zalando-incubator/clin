@@ -33,7 +33,7 @@ colorama = "^0.4"
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
 toml = "^0.10.0"
-black = "^21.4b1"
+black = "^21.4b2"
 
 [tool.poetry.scripts]
 clin = "clin.run:cli"

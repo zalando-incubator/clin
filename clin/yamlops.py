@@ -147,7 +147,7 @@ class YamlIncorrectSubstitutionError(YamlError):
 
 class YamlInvalidFormatError(YamlError):
     def __init__(self, file: Path, message: str):
-        super(file)
+        super(YamlInvalidFormatError, self).__init__(file)
         self.message = message
 
     def __str__(self):

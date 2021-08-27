@@ -5,6 +5,7 @@ from requests import HTTPError
 
 from clin.clients.nakadi import NakadiError
 from clin.clients.http_client import HttpClient, ro_auth_from_payload, auth_to_payload
+from clin.models.auth import Auth
 from clin.models.event_type import EventType
 from clin.models.sql_query import SqlQuery, OutputEventType
 from clin.models.shared import Category, Cleanup, Audience, Partitioning
@@ -31,14 +32,21 @@ class NakadiSql(HttpClient):
                 f"Nakadi error during creation of sql query '{sql_query.name}'", resp
             )
 
-    def update_sql_query_auth(self, sql_query: SqlQuery):
+    def update_sql_query_auth(self, query_name: str, auth: Auth):
         resp = self._put(
-            f"queries/{sql_query.name}/authorization",
-            data=json.dumps(auth_to_payload(sql_query.auth)),
+            f"queries/{query_name}/authorization",
+            data=json.dumps(auth_to_payload(auth)),
         )
         if resp.status_code != 200:
             raise NakadiError(
-                f"Nakadi error during updating of sql query '{sql_query.name}'", resp
+                f"Nakadi error during updating of sql query '{query_name}'", resp
+            )
+
+    def update_sql_query_sql(self, query_name: str, sql: str):
+        resp = self._put(f"queries/{query_name}/sql", data=json.dumps({"sql": sql}))
+        if resp.status_code != 204:
+            raise NakadiError(
+                f"Nakadi error during updating of sql query '{query_name}'", resp
             )
 
 

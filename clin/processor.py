@@ -88,7 +88,7 @@ class Processor:
             changed_keys = itertools.chain(
                 diff.get("values_changed", {}).keys(),
                 diff.get("iterable_item_removed", {}).keys(),
-                diff.get("iterable_item_added", {}).keys()
+                diff.get("iterable_item_added", {}).keys(),
             )
 
             return set(k.split(".")[1] for k in changed_keys)
@@ -238,9 +238,13 @@ class Processor:
     def _update_sql_query_auth(self, nakadi_sql: NakadiSql, query: SqlQuery):
         if self.execute:
             nakadi_sql.update_sql_query_auth(query.name, query.auth)
-            logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s authentication", query)
+            logging.info(
+                f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s authentication", query
+            )
         else:
-            logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s authentication", query)
+            logging.info(
+                f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s authentication", query
+            )
 
     def _update_sql_query_sql(self, nakadi_sql: NakadiSql, query: SqlQuery):
         if self.execute:

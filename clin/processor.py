@@ -1,3 +1,4 @@
+import itertools
 import json
 import logging
 from typing import Optional, Dict, Callable
@@ -83,11 +84,14 @@ class Processor:
         nakadi_sql = self._get_nakadi_sql(env)
         query = SqlQuery.from_spec(spec)
 
-        def is_allowed_sql_change(diff: dict):
-            for k in diff.get("values_changed", {}).keys():
-                if "auth" not in k:
-                    return False
-            return True
+        def get_changed_sections(diff: dict):
+            changed_keys = itertools.chain(
+                diff.get("values_changed", {}).keys(),
+                diff.get("iterable_item_removed", {}).keys(),
+                diff.get("iterable_item_added", {}).keys(),
+            )
+
+            return set(k.split(".")[1] for k in changed_keys)
 
         try:
             current_et = nakadi.get_event_type(query.name)
@@ -98,20 +102,27 @@ class Processor:
                 diff = DeepDiff(
                     current, query, ignore_order=True, report_repetition=True
                 )
+
+                changed_sections = get_changed_sections(diff)
+
                 if diff:
                     self._maybe_print_diff(query, diff)
 
-                    if not is_allowed_sql_change(diff):
+                    changed_auth = "auth" in changed_sections
+                    changed_sql = "sql" in changed_sections
+                    forbidden_changes = changed_sections - {"auth", "sql"}
 
+                    if forbidden_changes:
                         logging.info(
                             f"{ERROR_COLOR}× Modifying output event type is forbidden:{Fore.RESET} %s",
                             query,
                         )
-
                     else:
                         self._maybe_print_payload(query)
-                        self._update_sql_query(nakadi_sql, query)
-
+                        if changed_auth:
+                            self._update_sql_query_auth(nakadi_sql, query)
+                        if changed_sql:
+                            self._update_sql_query_sql(nakadi_sql, query)
                 else:
                     logging.info(
                         f"{UP_TO_DATE_COLOR}✔ Up to date:{Fore.RESET} %s", query
@@ -224,12 +235,23 @@ class Processor:
         else:
             logging.info(f"{MODIFY_COLOR}⦿ Will create:{Fore.RESET} %s", sub)
 
-    def _update_sql_query(self, nakadi_sql: NakadiSql, query: SqlQuery):
+    def _update_sql_query_auth(self, nakadi_sql: NakadiSql, query: SqlQuery):
         if self.execute:
-            nakadi_sql.update_sql_query_auth(query)
-            logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s", query)
+            nakadi_sql.update_sql_query_auth(query.name, query.auth)
+            logging.info(
+                f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s authentication", query
+            )
         else:
-            logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s", query)
+            logging.info(
+                f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s authentication", query
+            )
+
+    def _update_sql_query_sql(self, nakadi_sql: NakadiSql, query: SqlQuery):
+        if self.execute:
+            nakadi_sql.update_sql_query_sql(query.name, query.sql)
+            logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s query", query)
+        else:
+            logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s query", query)
 
     def _create_sql_query(self, nakadi: Nakadi, nakadi_sql: NakadiSql, query: SqlQuery):
         if self.execute:

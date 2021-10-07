@@ -39,6 +39,32 @@ class Kind(str, Enum):
 
 
 @dataclass
+class EventOwnerSelector:
+    @unique
+    class Type(str, Enum):
+        PATH = "path"
+        STATIC = "static"
+
+        def __str__(self) -> str:
+            return str(self.value)
+
+    type: Type
+    name: str
+    value: str
+
+    @staticmethod
+    def from_spec(spec: dict[str, any]) -> EventOwnerSelector:
+        return EventOwnerSelector(
+            type=EventOwnerSelector.Type(spec["type"]),
+            name=spec["name"],
+            value=spec["value"],
+        )
+
+    def to_spec(self) -> dict[str, any]:
+        return {"type": str(self.type), "name": self.name, "value": self.value}
+
+
+@dataclass
 class Cleanup:
     @unique
     class Policy(str, Enum):

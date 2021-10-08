@@ -16,7 +16,7 @@ from clin.clients.nakadi_sql import NakadiSql, sql_query_to_payload
 from clin.config import AppConfig
 from clin.models.auth import ReadWriteAuth, ReadOnlyAuth
 from clin.models.event_type import EventType
-from clin.models.shared import Kind, Envelope, Entity
+from clin.models.shared import Kind, Envelope, Entity, EventOwnerSelector
 from clin.models.sql_query import SqlQuery
 from clin.models.subscription import Subscription
 from clin.utils import pretty_yaml, pretty_json
@@ -175,6 +175,7 @@ class Processor:
                         ReadOnlyAuth: convert_to_spec,
                         ReadWriteAuth: convert_to_spec,
                         EventType: convert_to_spec,
+                        EventOwnerSelector: convert_to_spec,
                         SqlQuery: convert_to_spec,
                         Subscription: convert_to_spec,
                         Entity: convert_to_spec,

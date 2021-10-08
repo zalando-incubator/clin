@@ -14,6 +14,7 @@ from clin.clients.http_client import (
 )
 from clin.models.event_type import (
     EventType,
+    EventOwnerSelector,
     Category,
     Cleanup,
     Partitioning,
@@ -179,10 +180,32 @@ def event_type_to_payload(
     }
     if include_statistics:
         payload.update(default_statistic_part)
+    if event_type.event_owner_selector:
+        payload.update(
+            {
+                "event_owner_selector": {
+                    "name": event_type.event_owner_selector.name,
+                    "type": event_type.event_owner_selector.type,
+                    "value": event_type.event_owner_selector.value,
+                },
+            }
+        )
     return payload
 
 
 def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
+    def maybe_event_owner_selector():
+        selector = payload.get("event_owner_selector", None)
+        return (
+            EventOwnerSelector(
+                type=EventOwnerSelector.Type(selector["type"]),
+                name=selector["name"],
+                value=selector["value"],
+            )
+            if selector
+            else None
+        )
+
     return EventType(
         name=payload["name"],
         category=Category(payload["category"]),
@@ -203,6 +226,7 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
             json_schema=json.loads(payload["schema"]["schema"]),
         ),
         auth=rw_auth_from_payload(payload["authorization"]),
+        event_owner_selector=maybe_event_owner_selector(),
     )
 
 

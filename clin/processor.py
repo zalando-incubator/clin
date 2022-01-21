@@ -89,6 +89,8 @@ class Processor:
                 diff.get("values_changed", {}).keys(),
                 diff.get("iterable_item_removed", {}).keys(),
                 diff.get("iterable_item_added", {}).keys(),
+                diff.get("dictionary_item_added", []),
+                diff.get("dictionary_item_removed", []),
             )
 
             return set(k.split(".")[1] for k in changed_keys)

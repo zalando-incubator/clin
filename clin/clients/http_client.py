@@ -63,12 +63,13 @@ def auth_to_payload(auth: Auth) -> dict:
 
 
 def ro_auth_from_payload(payload: dict) -> Optional[ReadOnlyAuth]:
-    return _auth_from_payload(ReadOnlyAuth({}, {}, {"read": False}), payload)
+    return _auth_from_payload(ReadOnlyAuth({}, {}, {}, {"read": False}), payload)
 
 
 def rw_auth_from_payload(payload: dict) -> Optional[ReadWriteAuth]:
     return _auth_from_payload(
-        ReadWriteAuth({}, {}, {"read": False, "write": False}), payload
+        ReadWriteAuth({}, {}, {}, {"read": False, "write": False}),
+        payload
     )
 
 
@@ -76,10 +77,13 @@ def _auth_from_payload(auth: TAuth, payload: dict) -> Optional[TAuth]:
     if not payload:
         return None
 
-    for role in auth.get_roles():
+    for role in auth.get_roles():  # admins, readers
+        auth.teams[role] = []
         auth.users[role] = []
         auth.services[role] = []
         for el in payload.get(role, []):
+            if el["data_type"] == "team":
+                auth.teams[role].append(el["value"])
             if el["data_type"] == "user":
                 auth.users[role].append(el["value"])
             if el["data_type"] == "service":

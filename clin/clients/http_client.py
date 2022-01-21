@@ -68,8 +68,7 @@ def ro_auth_from_payload(payload: dict) -> Optional[ReadOnlyAuth]:
 
 def rw_auth_from_payload(payload: dict) -> Optional[ReadWriteAuth]:
     return _auth_from_payload(
-        ReadWriteAuth({}, {}, {}, {"read": False, "write": False}),
-        payload
+        ReadWriteAuth({}, {}, {}, {"read": False, "write": False}), payload
     )
 
 

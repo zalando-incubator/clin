@@ -51,7 +51,7 @@ def auth_to_payload(auth: Auth) -> dict:
                 {"data_type": key, "value": x} for x in getattr(auth, key + "s")[role]
             ]
 
-        return el("user") + el("service")
+        return el("user") + el("service") + el("team")
 
     payload = {role: parse(role) for role in auth.get_roles()}
     if auth.any_token.get("read", False):

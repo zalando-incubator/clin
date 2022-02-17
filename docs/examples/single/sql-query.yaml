@@ -13,10 +13,14 @@ spec:
     cleanup:
       policy: delete
       retentionTimeDays: 2
+    repartitioning:
+      partitionCount: 6
+      strategy: hash
+      keys: [ "important_key" ]
   auth:
     users:
       admins:
-      - dstockhammer
+      - {{USER}} # env vars will be used to resolve this template variable
       readers:
       - dstockhammer
       - derokhin
@@ -24,5 +28,3 @@ spec:
       admins:
       readers:
         - stups_your-application
-    anyToken:
-      read: false

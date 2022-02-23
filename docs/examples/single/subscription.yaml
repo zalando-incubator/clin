@@ -1,14 +1,17 @@
 kind: subscription
 spec:
-  owningApplication: stups_your-application
-  eventTypes:
-    - zprice.derokhin.temp.clin.test1
-    - zprice.derokhin.temp.clin.test2
+  owningApplication: your_application_id
+  eventTypes:  # list of event-types in subscription
+    - clin.example.event-type
   consumerGroup: main
   auth:
+    teams:
+      admins:
+        - your_team
+      readers:
     users:
       admins:
-        - {{USER}}
+        - {{USER}}  # env vars will be used to resolve this template variable
       readers:
         - {{USER}}
     services:

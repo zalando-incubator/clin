@@ -1,8 +1,8 @@
 kind: event-type
 spec:
-  name: derokhin.clin.test # event type name - if it already exists, it will be updated
+  name: clin.example.event-type # event type name - if it already exists, it will be updated
   category: business # business | data | undefined
-  owningApplication: stups_your-application # application kio id with "stups_" prefix
+  owningApplication: your_application_id
   audience: component-internal # component-internal | business-unit-internal | company-internal | external-partner | external-public
   partitioning:
     strategy: hash # hash | random | user_defined
@@ -16,12 +16,17 @@ spec:
     compatibility: compatible # none | forward | compatible
     jsonSchema: @@@./schema.yaml # Includes file relatively to the current
   auth:
+    teams:
+      admins:
+        - your_team
+      readers:
+        - sibling_team
+      writers:
     users:
       admins:
         - {{USER}} # env vars will be used to resolve this template variable
       writers:
         - {{USER}}
-        - pjain
       readers:
     services:
       admins:

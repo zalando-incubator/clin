@@ -9,6 +9,7 @@ from clin.utils import ensure_flat_list
 @dataclass
 class Auth(ABC):
     users: dict[str, list[str]]
+    teams: dict[str, list[str]]
     services: dict[str, list[str]]
     any_token: dict[str, bool]
 
@@ -26,6 +27,7 @@ class Auth(ABC):
     def from_spec(cls, spec: dict) -> Auth:
         return cls(
             users=cls._parse_section(spec, "users"),
+            teams=cls._parse_section(spec, "teams"),
             services=cls._parse_section(spec, "services"),
             any_token=cls._parse_any_token(spec),
         )
@@ -33,6 +35,7 @@ class Auth(ABC):
     def to_spec(self) -> dict[str, dict[str, list[str]]]:
         return {
             "users": {role: self.users[role] for role in self.get_roles()},
+            "teams": {role: self.teams[role] for role in self.get_roles()},
             "services": {role: self.services[role] for role in self.get_roles()},
             "anyToken": {
                 role: self.any_token.get(role, False)

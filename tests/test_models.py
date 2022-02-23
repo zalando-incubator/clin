@@ -7,6 +7,16 @@ from clin.models.shared import Kind, Envelope
 
 yml = """
 auth:
+  teams:
+    admins:
+      - your_team
+    readers:
+      - sibling_team
+      - - other_team_1
+        - other_team_2
+    writers:
+      - your_upstream_team_1
+      - your_upstream_team_2
   users:
     admins:         # single item
       - hammond
@@ -46,6 +56,10 @@ def test_loads_full_auth_as_flat_lists_without_duplicates():
     spec = yaml.safe_load(yml)
     auth = ReadWriteAuth.from_spec(spec["auth"])
 
+    assert auth.teams["admins"] == ["your_team"]
+    assert set(auth.teams["writers"]) == {"your_upstream_team_1", "your_upstream_team_2"}
+    assert set(auth.teams["readers"]) == {"sibling_team", "other_team_1", "other_team_2"}
+
     assert auth.users["admins"] == ["hammond"]
     assert set(auth.users["writers"]) == {"o'neill", "carter", "jackson", "teal'c"}
     assert set(auth.users["readers"]) == {"quinn", "mitchell", "mal doran"}
@@ -63,6 +77,9 @@ def test_loads_full_auth_as_flat_lists_without_duplicates():
 def test_loads_readonly_auth_as_flat_lists_without_duplicates():
     spec = yaml.safe_load(yml)
     auth = ReadOnlyAuth.from_spec(spec["auth"])
+
+    assert auth.teams["admins"] == ["your_team"]
+    assert set(auth.teams["readers"]) == {"sibling_team", "other_team_1", "other_team_2"}
 
     assert auth.users["admins"] == ["hammond"]
     assert set(auth.users["readers"]) == {"quinn", "mitchell", "mal doran"}

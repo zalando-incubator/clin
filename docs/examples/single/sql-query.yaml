@@ -1,14 +1,14 @@
 kind: sql-query
 spec:
-  name: derokhin.clin.test-query # query name - if it already exists, it will be updated
+  name: clin.example.sql # query name - if it already exists, it will be updated
   sql: |
     SELECT *
-    FROM "derokhin.clin.test" AS e
+    FROM "clin.example.event-type" AS e
     WHERE e."important_key" = 'hello world'
   envelope: false
   outputEventType:
     category: business # business | data | undefined
-    owningApplication: stups_your-application # application kio id with "stups_" prefix
+    owningApplication: your_application_id # application kio id
     audience: component-internal # component-internal | business-unit-internal | company-internal | external-partner | external-public
     cleanup:
       policy: delete
@@ -18,13 +18,17 @@ spec:
       strategy: hash
       keys: [ "important_key" ]
   auth:
+    teams:
+      admins:
+        - your_team
+      readers:
+        - sibling_team
     users:
       admins:
-      - {{USER}} # env vars will be used to resolve this template variable
+        - {{USER}}  # env vars will be used to resolve this template variable
       readers:
-      - dstockhammer
-      - derokhin
+        - derokhin
     services:
       admins:
       readers:
-        - stups_your-application
+        - your_application_id

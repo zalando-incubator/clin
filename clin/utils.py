@@ -35,7 +35,7 @@ def ensure_flat_list(val) -> list:
 
 
 def configure_logging(verbose: bool):
-    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
+    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stderr)
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     logging.getLogger("requests").setLevel(logging.WARNING)

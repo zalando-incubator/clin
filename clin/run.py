@@ -245,6 +245,9 @@ def dump(
             logging.error(f"Environment not found in configuration: {env}")
             exit(-1)
 
+        if not config.environments[env].nakadi_sql_url:
+            logging.warning(f"Configuration key nakadi_sql_url was not defined for your environment {env}. You won't be able to dump Nakadi SQL.")
+
         nakadi = Nakadi(config.environments[env].nakadi_url, token)
         entity = nakadi.get_event_type(event_type)
 
@@ -261,9 +264,9 @@ def dump(
         )
 
         if output.lower() == "yaml":
-            logging.info(pretty_yaml(payload))
+            print(pretty_yaml(payload))
         elif output.lower() == "json":
-            logging.info(pretty_json(payload))
+            print(pretty_json(payload))
         else:
             logging.error("Invalid output format: %s", output)
             exit(-1)

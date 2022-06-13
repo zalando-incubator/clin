@@ -246,7 +246,9 @@ def dump(
             exit(-1)
 
         if not config.environments[env].nakadi_sql_url:
-            logging.warning(f"Configuration key nakadi_sql_url was not defined for your environment {env}. You won't be able to dump Nakadi SQL.")
+            logging.warning(
+                f"Configuration key nakadi_sql_url was not defined for your environment {env}. You won't be able to dump Nakadi SQL."
+            )
 
         nakadi = Nakadi(config.environments[env].nakadi_url, token)
         entity = nakadi.get_event_type(event_type)

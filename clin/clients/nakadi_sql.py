@@ -120,7 +120,7 @@ def sql_query_to_payload(sql_query: SqlQuery) -> dict:
     }
 
     if sql_query.output_event_type.repartitioning:
-        payload["repartition_parameters"] = {
+        payload["output_event_type"]["repartition_parameters"] = {
             "number_of_partitions": sql_query.output_event_type.repartitioning.partition_count,
             "partition_strategy": str(
                 sql_query.output_event_type.repartitioning.strategy

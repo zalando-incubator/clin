@@ -74,6 +74,34 @@ def test_loads_full_auth_as_flat_lists_without_duplicates():
     assert auth.any_token["read"] is True
 
 
+
+
+# data = getData(request.configSKU, request.salesChannel)
+#
+# FOR reqSimple in request.simples DO
+# currentKnown = getLatest(data, reqSimple.simpleSKU, reqSimple.merchant)
+# IF currentKnown != null THEN
+# curEff = getEffectivePrice(currentKnown.black, currentKnown.red)
+# reqEff = getEffectivePrice(reqSimple.black, reqSimple.red)
+# IF curEff != reqEff THEN
+#
+# data.add()
+#
+# END IF
+#
+# END FOR
+
+
+
+
+
+
+
+
+
+
+
+
 def test_loads_readonly_auth_as_flat_lists_without_duplicates():
     spec = yaml.safe_load(yml)
     auth = ReadOnlyAuth.from_spec(spec["auth"])

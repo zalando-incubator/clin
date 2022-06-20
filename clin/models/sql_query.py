@@ -23,7 +23,7 @@ class OutputEventType:
             category=Category(spec["category"]),
             owning_application=spec["owningApplication"],
             audience=Audience(spec["audience"]),
-            repartitioning=Partitioning.from_spec(spec["repartitioning"])
+            repartitioning=Partitioning.from_spec(spec["repartitioning"])  # TODO: incorrect
             if "repartitioning" in spec
             else None,
             cleanup=Cleanup.from_spec(spec["cleanup"]),

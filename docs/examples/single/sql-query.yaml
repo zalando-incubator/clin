@@ -34,3 +34,4 @@ spec:
       admins:
       readers:
         - your_application_id
+

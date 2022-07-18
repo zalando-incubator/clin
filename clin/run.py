@@ -249,7 +249,7 @@ def dump(
         if not config.environments[env].nakadi_sql_url:
             print(
                 f"Configuration key nakadi_sql_url was not defined for your environment {env}. You won't be able to dump Nakadi SQL.",
-                file=sys.stderr
+                file=sys.stderr,
             )
 
         nakadi = Nakadi(config.environments[env].nakadi_url, token)

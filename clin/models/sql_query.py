@@ -46,7 +46,7 @@ class OutputEventType:
 
         if self.partition_compaction_key_field:
             spec["partitionCompactionKeyField"] = self.partition_compaction_key_field
-            
+
         return spec
 
 

@@ -81,6 +81,9 @@ def output_event_type_from_payload(
             policy=Cleanup.Policy(payload["cleanup_policy"]),
             retention_time_days=payload.get("retention_time", 0) // MS_IN_DAY,
         ),
+        partition_compaction_key_field=payload["partition_compaction_key_field"]
+        if "partition_compaction_key_field" in payload
+        else None,
     )
 
 

@@ -28,9 +28,7 @@ class OutputEventType:
             if "repartitioning" in spec
             else None,
             cleanup=Cleanup.from_spec(spec["cleanup"]),
-            partition_compaction_key_field=spec["partitionCompactionKeyField"]
-            if "partitionCompactionKeyField" in spec
-            else None,
+            partition_compaction_key_field=spec.get("partitionCompactionKeyField"),
         )
 
     def to_spec(self) -> dict[str, any]:

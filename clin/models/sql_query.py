@@ -16,7 +16,7 @@ class OutputEventType:
     audience: Audience
     repartitioning: Optional[Partitioning]
     cleanup: Cleanup
-    partition_compaction_key_field: str
+    partition_compaction_key_field: Optional[str]
 
     @staticmethod
     def from_spec(spec: dict[str, any]):
@@ -28,7 +28,7 @@ class OutputEventType:
             if "repartitioning" in spec
             else None,
             cleanup=Cleanup.from_spec(spec["cleanup"]),
-            partition_compaction_key_field=spec["partitionCompactionKeyField"],
+            partition_compaction_key_field=spec.get("partitionCompactionKeyField"),
         )
 
     def to_spec(self) -> dict[str, any]:
@@ -37,11 +37,13 @@ class OutputEventType:
             "owningApplication": self.owning_application,
             "audience": str(self.audience),
             "cleanup": self.cleanup.to_spec(),
-            "partitionCompactionKeyField": self.partition_compaction_key_field,
         }
 
         if self.repartitioning:
             spec["repartitioning"] = self.repartitioning.to_spec()
+
+        if self.partition_compaction_key_field:
+            spec["partitionCompactionKeyField"] = self.partition_compaction_key_field
 
         return spec
 

@@ -13,7 +13,7 @@ spec:
     cleanup:
       policy: delete
       retentionTimeDays: 2
-    partitionCompactionKeyField": product_logistics.metadata.partition_compaction_key
+    partitionCompactionKeyField: product_logistics.metadata.partition_compaction_key
     repartitioning:
       strategy: hash
       keys:

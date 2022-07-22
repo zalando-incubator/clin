@@ -44,7 +44,9 @@ def calculate_scope(
                     f"Specified path 'f{source.absolute()}' is not found for process '{proc_id}'"
                 )
 
-            manifests_files += chain(source.glob("*.yml"), source.glob("*.yaml"))
+            manifests_files += sorted(
+                chain(source.glob("*.yml"), source.glob("*.yaml"))
+            )
             if not manifests_files:
                 logging.warning(
                     "No manifests found for process '%s' in '%s'",

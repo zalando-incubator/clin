@@ -81,6 +81,7 @@ def output_event_type_from_payload(
             policy=Cleanup.Policy(payload["cleanup_policy"]),
             retention_time_days=payload.get("retention_time", 0) // MS_IN_DAY,
         ),
+        partition_compaction_key_field=payload.get("partition_compaction_key_field"),
     )
 
 
@@ -120,12 +121,17 @@ def sql_query_to_payload(sql_query: SqlQuery) -> dict:
     }
 
     if sql_query.output_event_type.repartitioning:
-        payload["repartition_parameters"] = {
+        payload["output_event_type"]["repartition_parameters"] = {
             "number_of_partitions": sql_query.output_event_type.repartitioning.partition_count,
             "partition_strategy": str(
                 sql_query.output_event_type.repartitioning.strategy
             ),
             "partition_key_fields": sql_query.output_event_type.repartitioning.keys,
         }
+
+    if sql_query.output_event_type.partition_compaction_key_field:
+        payload["output_event_type"][
+            "partition_compaction_key_field"
+        ] = sql_query.output_event_type.partition_compaction_key_field
 
     return payload

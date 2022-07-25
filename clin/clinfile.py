@@ -55,8 +55,15 @@ def calculate_scope(
                 )
 
         for manifest_file in manifests_files:
+            logging.debug("Processing manifest file '%s'", manifest_file)
             manifest = loader.load_yaml_from_file(manifest_file, proc.get("env", {}))
-            envelope = Envelope.from_manifest(manifest)
+
+            try:
+                envelope = Envelope.from_manifest(manifest)
+            except ValueError:
+                logging.error("Could not process manifest file '%s'", manifest_file)
+                raise
+
             scope[envelope.kind].append(
                 Process(
                     id=proc_id,

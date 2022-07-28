@@ -67,7 +67,7 @@ def calculate_scope(
             scope[envelope.kind].append(
                 Process(
                     id=proc_id,
-                    path=manifest_file,
+                    path=str(manifest_file),
                     envelope=envelope,
                     target=proc["target"],
                 )

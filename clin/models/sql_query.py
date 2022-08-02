@@ -55,6 +55,7 @@ class SqlQuery(Entity):
     envelope: bool
     output_event_type: OutputEventType
     auth: ReadOnlyAuth
+    read_from: Optional[str]
 
     def __str__(self) -> str:
         return f"sql query {Fore.BLUE}{self.name}{Fore.RESET}"
@@ -71,6 +72,7 @@ class SqlQuery(Entity):
             envelope=spec["envelope"],
             output_event_type=OutputEventType.from_spec(spec["outputEventType"]),
             auth=ReadOnlyAuth.from_spec(spec["auth"]),
+            read_from=spec.get("read_from"),
         )
 
     def to_spec(self) -> dict[str, any]:
@@ -80,4 +82,5 @@ class SqlQuery(Entity):
             "envelope": self.envelope,
             "outputEventType": self.output_event_type.to_spec(),
             "auth": self.auth.to_spec() if self.auth else {},
+            "read_from": self.read_from if self.read_from else "end",
         }

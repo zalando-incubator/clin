@@ -6,6 +6,7 @@ spec:
     FROM "{{TEAM}}.zalandify.input{{POSTFIX}}" AS e
     WHERE e."text" <> ''
   envelope: false
+  read_from: end # end | begin - default "end" if not specified
   outputEventType:
     category: business
     owningApplication: stups_zalandify

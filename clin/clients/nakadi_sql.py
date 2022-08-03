@@ -100,6 +100,7 @@ def sql_query_from_payload(event_type: EventType, payload: dict) -> SqlQuery:
             event_type, payload["output_event_type"]
         ),
         auth=ro_auth_from_payload(payload["authorization"]),
+        read_from=payload["read_from"],
     )
 
 
@@ -133,5 +134,8 @@ def sql_query_to_payload(sql_query: SqlQuery) -> dict:
         payload["output_event_type"][
             "partition_compaction_key_field"
         ] = sql_query.output_event_type.partition_compaction_key_field
+
+    if sql_query.read_from:
+        payload["read_from"] = sql_query.read_from
 
     return payload

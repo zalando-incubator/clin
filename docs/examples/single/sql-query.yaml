@@ -6,6 +6,7 @@ spec:
     FROM "clin.example.event-type" AS e
     WHERE e."important_key" = 'hello world'
   envelope: false
+  read_from: end # end | begin - default "end" if not specified
   outputEventType:
     category: business # business | data | undefined
     owningApplication: your_application_id

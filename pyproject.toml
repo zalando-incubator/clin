@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "clin"
+name = "clin" 
 version = "1.0.dev0"
 description = "Cli for Nakadi resources management in Infrastructure as Code style"
 homepage = "https://github.com/zalando-incubator/clin"

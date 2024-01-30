@@ -29,6 +29,7 @@ class EventType(Entity):
     schema: Schema
     auth: ReadWriteAuth
     event_owner_selector: Optional[EventOwnerSelector]
+    annotations: dict[str, str]
 
     def __str__(self) -> str:
         return f"event type {Fore.BLUE}{self.name}{Fore.RESET}"
@@ -53,17 +54,11 @@ class EventType(Entity):
             schema=Schema.from_spec(spec["schema"]),
             auth=ReadWriteAuth.from_spec(spec["auth"]),
             event_owner_selector=maybe_event_owner_selector(),
+            annotations=spec.get("annotations", {}),
         )
 
     def to_spec(self) -> dict[str, any]:
-        def maybe_event_owner_selector():
-            return (
-                self.event_owner_selector.to_spec()
-                if self.event_owner_selector
-                else None
-            )
-
-        return {
+        spec = {
             "name": self.name,
             "category": str(self.category),
             "owningApplication": self.owning_application,
@@ -72,5 +67,13 @@ class EventType(Entity):
             "cleanup": self.cleanup.to_spec(),
             "schema": self.schema.to_spec(),
             "auth": self.auth.to_spec() if self.auth else {},
-            "eventOwnerSelector": maybe_event_owner_selector(),
+            "annotations": self.annotations,
         }
+
+        if self.event_owner_selector:
+            spec["eventOwnerSelector"] = self.event_owner_selector.to_spec()
+
+        if self.annotations:
+            spec["annotations"] = self.annotations
+
+        return spec

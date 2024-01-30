@@ -190,21 +190,21 @@ def event_type_to_payload(
                 },
             }
         )
+    if event_type.annotations:
+        payload.update({"annotations": event_type.annotations})
     return payload
 
 
 def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
     def maybe_event_owner_selector():
         selector = payload.get("event_owner_selector", None)
-        return (
-            EventOwnerSelector(
-                type=EventOwnerSelector.Type(selector["type"]),
-                name=selector["name"],
-                value=selector["value"],
-            )
-            if selector
-            else None
-        )
+        if selector:
+            return EventOwnerSelector(
+                    type=EventOwnerSelector.Type(selector["type"]),
+                    name=selector["name"],
+                    value=selector["value"])
+        else:
+            return None
 
     return EventType(
         name=payload["name"],
@@ -227,6 +227,7 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
         ),
         auth=rw_auth_from_payload(payload["authorization"]),
         event_owner_selector=maybe_event_owner_selector(),
+        annotations=payload.get("annotations", {}),
     )
 
 

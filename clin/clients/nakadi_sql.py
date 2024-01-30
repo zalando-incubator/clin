@@ -82,6 +82,7 @@ def output_event_type_from_payload(
             retention_time_days=payload.get("retention_time", 0) // MS_IN_DAY,
         ),
         partition_compaction_key_field=payload.get("partition_compaction_key_field"),
+        annotations=payload.get("annotations", {}),
     )
 
 
@@ -89,7 +90,7 @@ def sql_query_from_payload(event_type: EventType, payload: dict) -> SqlQuery:
     if payload["id"] != payload["output_event_type"]["name"]:
         raise NakadiError(
             "The output event type's name does not match the sql query id."
-            " This is unexpected and unsupported - please report this issue in the clin project on GitHub!"
+            "This is unexpected and unsupported - please report this issue in the clin project on GitHub!"
         )
 
     return SqlQuery(
@@ -120,6 +121,9 @@ def sql_query_to_payload(sql_query: SqlQuery) -> dict:
         },
         "authorization": auth_to_payload(sql_query.auth),
     }
+
+    if sql_query.output_event_type.annotations:
+        payload["output_event_type"]["annotations"] = sql_query.output_event_type.annotations
 
     if sql_query.output_event_type.repartitioning:
         payload["output_event_type"]["repartition_parameters"] = {

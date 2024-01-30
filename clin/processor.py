@@ -84,7 +84,7 @@ class Processor:
         nakadi_sql = self._get_nakadi_sql(env)
         query = SqlQuery.from_spec(spec)
 
-        def get_changed_sections(diff: dict):
+        def get_changed_paths(diff: dict):
             changed_keys = itertools.chain(
                 diff.get("values_changed", {}).keys(),
                 diff.get("iterable_item_removed", {}).keys(),
@@ -93,7 +93,7 @@ class Processor:
                 diff.get("dictionary_item_removed", []),
             )
 
-            return set(k.split(".")[1] for k in changed_keys)
+            return set(changed_keys)
 
         try:
             current_et = nakadi.get_event_type(query.name)
@@ -105,18 +105,21 @@ class Processor:
                     current, query, ignore_order=True, report_repetition=True
                 )
 
-                changed_sections = get_changed_sections(diff)
+                changed_paths = get_changed_paths(diff)
+
+                # TODO: use put on sql endpoints for auth, sql and annotations
+                # TODO: prohibit changes that are not taking effect
 
                 if diff:
                     self._maybe_print_diff(query, diff)
 
-                    changed_auth = "auth" in changed_sections
-                    changed_sql = "sql" in changed_sections
-                    forbidden_changes = changed_sections - {"auth", "sql"}
+                    changed_auth = [p for p in changed_paths if p.startswith("root.auth")]
+                    changed_sql = [p for p in changed_paths if p.startswith("root.sql")]
+                    changed_ann = [p for p in changed_paths if p.startswith("root.output_event_type.annotations")]
 
-                    if forbidden_changes:
+                    if not (changed_auth or changed_sql or changed_ann):
                         logging.info(
-                            f"{ERROR_COLOR}× Modifying output event type is forbidden:{Fore.RESET} %s",
+                            f"{ERROR_COLOR}× Modifying is forbidden:{Fore.RESET} %s",
                             query,
                         )
                     else:
@@ -125,6 +128,18 @@ class Processor:
                             self._update_sql_query_auth(nakadi_sql, query)
                         if changed_sql:
                             self._update_sql_query_sql(nakadi_sql, query)
+                        if changed_ann:
+                            print("Will update annotations")
+                            # if self.execute:
+                            #     nakadi_sql.update_sql_query_sql(query.name, query.sql)
+                            #     logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s query", query)
+                            # else:
+                            # logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s query", query)
+                            #
+
+
+                            # self._update_annotations(nakadi, current_et)
+
                 else:
                     logging.info(
                         f"{UP_TO_DATE_COLOR}✔ Up to date:{Fore.RESET} %s", query

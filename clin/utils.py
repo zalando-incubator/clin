@@ -51,7 +51,9 @@ def pretty_yaml(val: dict, indentation: int = 0) -> str:
 
 def pretty_json(val: dict, indentation: int = 0) -> str:
     raw = highlight(
-        json.dumps(_remove_none(val), indent=2, sort_keys=False), JsonLexer(), _get_formatter()
+        json.dumps(_remove_none(val), indent=2, sort_keys=False),
+        JsonLexer(),
+        _get_formatter(),
     ).strip()
     return _indent(raw, indentation)
 

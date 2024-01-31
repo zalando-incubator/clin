@@ -12,6 +12,8 @@ spec:
   cleanup:
     policy: compact # compact | delete
     retentionTimeDays: 4 # days before delete for corresponding policy
+  annotations: # set of key-value pairs to define event type annotations
+    "foo": "bar"
   schema:
     compatibility: compatible # none | forward | compatible
     jsonSchema: @@@./schema.yaml # Includes file relatively to the current

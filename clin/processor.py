@@ -28,17 +28,18 @@ OUTPUT_INDENTATION = 4
 ALLOWED_SQL_CHANGE_PATHS_PREFIXES = [
     "root.auth",
     "root.output_event_type.annotations",
-    "root.sql"]
+    "root.sql",
+]
 
 
 class Processor:
     def __init__(
-            self,
-            config: AppConfig,
-            token: Optional[str],
-            execute: bool = False,
-            show_diff: bool = False,
-            show_payload: bool = False,
+        self,
+        config: AppConfig,
+        token: Optional[str],
+        execute: bool = False,
+        show_diff: bool = False,
+        show_payload: bool = False,
     ):
         self.apply_func_per_kind: Dict[Kind, Callable[[str, dict], None]] = {
             Kind.EVENT_TYPE: self.apply_event_type,
@@ -98,7 +99,10 @@ class Processor:
             )
 
             for key in changed_keys:
-                if not any(key.startswith(prefix) for prefix in ALLOWED_SQL_CHANGE_PATHS_PREFIXES):
+                if not any(
+                    key.startswith(prefix)
+                    for prefix in ALLOWED_SQL_CHANGE_PATHS_PREFIXES
+                ):
                     return False
 
             return True
@@ -108,16 +112,23 @@ class Processor:
             current = nakadi_sql.get_sql_query(current_et) if current_et else None
             if current:
                 logging.debug("Found existing %s", query)
-                diff = DeepDiff(current, query, ignore_order=True, report_repetition=True)
+                diff = DeepDiff(
+                    current, query, ignore_order=True, report_repetition=True
+                )
                 if diff:
                     self._maybe_print_diff(query, diff)
                     if is_allowed_change(diff):
                         self._maybe_print_payload(query)
                         self._update_sql_query(nakadi_sql, query)
                     else:
-                        logging.info(f"{ERROR_COLOR}× Modifying is forbidden:{Fore.RESET} %s", query)
+                        logging.info(
+                            f"{ERROR_COLOR}× Modifying is forbidden:{Fore.RESET} %s",
+                            query,
+                        )
                 else:
-                    logging.info(f"{UP_TO_DATE_COLOR}✔ Up to date:{Fore.RESET} %s", query)
+                    logging.info(
+                        f"{UP_TO_DATE_COLOR}✔ Up to date:{Fore.RESET} %s", query
+                    )
 
             else:
                 logging.debug("Not found existing %s", query)

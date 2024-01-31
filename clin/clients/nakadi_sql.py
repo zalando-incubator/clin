@@ -32,11 +32,14 @@ class NakadiSql(HttpClient):
             )
 
     def update_sql_query(self, query: SqlQuery):
-        resp = self._put(f"queries/{query.name}", data=json.dumps(sql_query_to_payload(query)))
+        resp = self._put(
+            f"queries/{query.name}", data=json.dumps(sql_query_to_payload(query))
+        )
         if resp.status_code != 200:
             raise NakadiError(
                 f"Nakadi error during updating sql query '{query.name}'", resp
             )
+
 
 def output_event_type_from_payload(
     event_type: EventType, payload: dict
@@ -111,7 +114,9 @@ def sql_query_to_payload(sql_query: SqlQuery) -> dict:
     }
 
     if sql_query.output_event_type.annotations:
-        payload["output_event_type"]["annotations"] = sql_query.output_event_type.annotations
+        payload["output_event_type"][
+            "annotations"
+        ] = sql_query.output_event_type.annotations
 
     if sql_query.output_event_type.repartitioning:
         payload["output_event_type"]["repartition_parameters"] = {

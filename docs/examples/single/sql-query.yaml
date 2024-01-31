@@ -14,12 +14,14 @@ spec:
     cleanup:
       policy: delete
       retentionTimeDays: 2
-    partitionCompactionKeyField: product_logistics.metadata.partition_compaction_key
+    partitionCompactionKeyField: important_key
     repartitioning:
       strategy: hash
       keys:
         - important_key
       partitionCount: 8
+    annotations: # set of key-value pairs to define output event type annotations
+      "foo": "bar"
   auth:
     teams:
       admins:

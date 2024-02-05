@@ -25,6 +25,11 @@ MODIFY_COLOR = Fore.MAGENTA
 ERROR_COLOR = Fore.RED
 UP_TO_DATE_COLOR = Fore.GREEN
 OUTPUT_INDENTATION = 4
+ALLOWED_SQL_CHANGE_PATHS_PREFIXES = [
+    "root.auth",
+    "root.output_event_type.annotations",
+    "root.sql",
+]
 
 
 class Processor:
@@ -84,7 +89,7 @@ class Processor:
         nakadi_sql = self._get_nakadi_sql(env)
         query = SqlQuery.from_spec(spec)
 
-        def get_changed_sections(diff: dict):
+        def is_allowed_change(diff: dict):
             changed_keys = itertools.chain(
                 diff.get("values_changed", {}).keys(),
                 diff.get("iterable_item_removed", {}).keys(),
@@ -93,38 +98,33 @@ class Processor:
                 diff.get("dictionary_item_removed", []),
             )
 
-            return set(k.split(".")[1] for k in changed_keys)
+            for key in changed_keys:
+                if not any(
+                    key.startswith(prefix)
+                    for prefix in ALLOWED_SQL_CHANGE_PATHS_PREFIXES
+                ):
+                    return False
+
+            return True
 
         try:
             current_et = nakadi.get_event_type(query.name)
             current = nakadi_sql.get_sql_query(current_et) if current_et else None
             if current:
                 logging.debug("Found existing %s", query)
-
                 diff = DeepDiff(
                     current, query, ignore_order=True, report_repetition=True
                 )
-
-                changed_sections = get_changed_sections(diff)
-
                 if diff:
                     self._maybe_print_diff(query, diff)
-
-                    changed_auth = "auth" in changed_sections
-                    changed_sql = "sql" in changed_sections
-                    forbidden_changes = changed_sections - {"auth", "sql"}
-
-                    if forbidden_changes:
+                    if is_allowed_change(diff):
+                        self._maybe_print_payload(query)
+                        self._update_sql_query(nakadi_sql, query)
+                    else:
                         logging.info(
-                            f"{ERROR_COLOR}× Modifying output event type is forbidden:{Fore.RESET} %s",
+                            f"{ERROR_COLOR}× Modifying is forbidden:{Fore.RESET} %s",
                             query,
                         )
-                    else:
-                        self._maybe_print_payload(query)
-                        if changed_auth:
-                            self._update_sql_query_auth(nakadi_sql, query)
-                        if changed_sql:
-                            self._update_sql_query_sql(nakadi_sql, query)
                 else:
                     logging.info(
                         f"{UP_TO_DATE_COLOR}✔ Up to date:{Fore.RESET} %s", query
@@ -133,7 +133,7 @@ class Processor:
             else:
                 logging.debug("Not found existing %s", query)
                 self._maybe_print_payload(query)
-                self._create_sql_query(nakadi, nakadi_sql, query)
+                self._create_sql_query(nakadi_sql, query)
 
         except NakadiError as err:
             raise ProcessingError(f"Can not process {query}: {err}") from err
@@ -238,30 +238,19 @@ class Processor:
         else:
             logging.info(f"{MODIFY_COLOR}⦿ Will create:{Fore.RESET} %s", sub)
 
-    def _update_sql_query_auth(self, nakadi_sql: NakadiSql, query: SqlQuery):
-        if self.execute:
-            nakadi_sql.update_sql_query_auth(query.name, query.auth)
-            logging.info(
-                f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s authentication", query
-            )
-        else:
-            logging.info(
-                f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s authentication", query
-            )
-
-    def _update_sql_query_sql(self, nakadi_sql: NakadiSql, query: SqlQuery):
-        if self.execute:
-            nakadi_sql.update_sql_query_sql(query.name, query.sql)
-            logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s query", query)
-        else:
-            logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s query", query)
-
-    def _create_sql_query(self, nakadi: Nakadi, nakadi_sql: NakadiSql, query: SqlQuery):
+    def _create_sql_query(self, nakadi_sql: NakadiSql, query: SqlQuery):
         if self.execute:
             nakadi_sql.create_sql_query(query)
             logging.info(f"{MODIFY_COLOR}⦿ Created:{Fore.RESET} %s", query)
         else:
             logging.info(f"{MODIFY_COLOR}⦿ Will create:{Fore.RESET} %s", query)
+
+    def _update_sql_query(self, nakadi_sql: NakadiSql, query: SqlQuery):
+        if self.execute:
+            nakadi_sql.update_sql_query(query)
+            logging.info(f"{MODIFY_COLOR}⦿ Updated:{Fore.RESET} %s", query)
+        else:
+            logging.info(f"{MODIFY_COLOR}⦿ Will update:{Fore.RESET} %s", query)
 
     def _get_nakadi(self, env: str) -> Nakadi:
         if env not in self.config.environments:

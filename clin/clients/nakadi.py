@@ -147,17 +147,6 @@ class NakadiError(Exception):
 def event_type_to_payload(
     event_type: EventType, include_statistics: bool = True
 ) -> dict:
-    enrichment_strategies = (
-        [] if event_type.category == Category.UNDEFINED else ["metadata_enrichment"]
-    )
-    default_statistic_part = {
-        "default_statistic": {
-            "messages_per_minute": 100,
-            "message_size": 100,
-            "read_parallelism": event_type.partitioning.partition_count,
-            "write_parallelism": event_type.partitioning.partition_count,
-        },
-    }
     payload = {
         "name": event_type.name,
         "owning_application": event_type.owning_application,
@@ -176,35 +165,41 @@ def event_type_to_payload(
             "schema": json.dumps(event_type.schema.json_schema),
         },
         "authorization": auth_to_payload(event_type.auth),
-        "enrichment_strategies": enrichment_strategies,
+        "enrichment_strategies": []
+        if event_type.category == Category.UNDEFINED
+        else ["metadata_enrichment"],
+        "annotations": event_type.annotations,
     }
+
     if include_statistics:
-        payload.update(default_statistic_part)
+        payload["default_statistic"] = {
+            "messages_per_minute": 1,
+            "message_size": 1,
+            "read_parallelism": event_type.partitioning.partition_count,
+            "write_parallelism": event_type.partitioning.partition_count,
+        }
+
     if event_type.event_owner_selector:
-        payload.update(
-            {
-                "event_owner_selector": {
-                    "name": event_type.event_owner_selector.name,
-                    "type": event_type.event_owner_selector.type,
-                    "value": event_type.event_owner_selector.value,
-                },
-            }
-        )
+        payload["event_owner_selector"] = {
+            "name": event_type.event_owner_selector.name,
+            "type": event_type.event_owner_selector.type,
+            "value": event_type.event_owner_selector.value,
+        }
+
     return payload
 
 
 def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
     def maybe_event_owner_selector():
         selector = payload.get("event_owner_selector", None)
-        return (
-            EventOwnerSelector(
+        if selector:
+            return EventOwnerSelector(
                 type=EventOwnerSelector.Type(selector["type"]),
                 name=selector["name"],
                 value=selector["value"],
             )
-            if selector
-            else None
-        )
+        else:
+            return None
 
     return EventType(
         name=payload["name"],
@@ -227,6 +222,7 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
         ),
         auth=rw_auth_from_payload(payload["authorization"]),
         event_owner_selector=maybe_event_owner_selector(),
+        annotations=payload.get("annotations", {}),
     )
 
 

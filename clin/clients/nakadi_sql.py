@@ -5,7 +5,6 @@ from requests import HTTPError
 
 from clin.clients.nakadi import NakadiError
 from clin.clients.http_client import HttpClient, ro_auth_from_payload, auth_to_payload
-from clin.models.auth import Auth
 from clin.models.event_type import EventType
 from clin.models.sql_query import SqlQuery, OutputEventType
 from clin.models.shared import Category, Cleanup, Audience, Partitioning
@@ -25,28 +24,20 @@ class NakadiSql(HttpClient):
                 f"Nakadi error trying to get sql query '{event_type}'", e.response
             )
 
-    def create_sql_query(self, sql_query: SqlQuery):
-        resp = self._post("queries", data=json.dumps(sql_query_to_payload(sql_query)))
+    def create_sql_query(self, query: SqlQuery):
+        resp = self._post("queries", data=json.dumps(sql_query_to_payload(query)))
         if resp.status_code != 201:
             raise NakadiError(
-                f"Nakadi error during creation of sql query '{sql_query.name}'", resp
+                f"Nakadi error during creation of sql query '{query.name}'", resp
             )
 
-    def update_sql_query_auth(self, query_name: str, auth: Auth):
+    def update_sql_query(self, query: SqlQuery):
         resp = self._put(
-            f"queries/{query_name}/authorization",
-            data=json.dumps(auth_to_payload(auth)),
+            f"queries/{query.name}", data=json.dumps(sql_query_to_payload(query))
         )
         if resp.status_code != 200:
             raise NakadiError(
-                f"Nakadi error during updating of sql query '{query_name}'", resp
-            )
-
-    def update_sql_query_sql(self, query_name: str, sql: str):
-        resp = self._put(f"queries/{query_name}/sql", data=json.dumps({"sql": sql}))
-        if resp.status_code != 204:
-            raise NakadiError(
-                f"Nakadi error during updating of sql query '{query_name}'", resp
+                f"Nakadi error during updating sql query '{query.name}'", resp
             )
 
 
@@ -82,6 +73,7 @@ def output_event_type_from_payload(
             retention_time_days=payload.get("retention_time", 0) // MS_IN_DAY,
         ),
         partition_compaction_key_field=payload.get("partition_compaction_key_field"),
+        annotations=payload.get("annotations", {}),
     )
 
 
@@ -89,7 +81,7 @@ def sql_query_from_payload(event_type: EventType, payload: dict) -> SqlQuery:
     if payload["id"] != payload["output_event_type"]["name"]:
         raise NakadiError(
             "The output event type's name does not match the sql query id."
-            " This is unexpected and unsupported - please report this issue in the clin project on GitHub!"
+            "This is unexpected and unsupported - please report this issue in the clin project on GitHub!"
         )
 
     return SqlQuery(
@@ -120,6 +112,11 @@ def sql_query_to_payload(sql_query: SqlQuery) -> dict:
         },
         "authorization": auth_to_payload(sql_query.auth),
     }
+
+    if sql_query.output_event_type.annotations:
+        payload["output_event_type"][
+            "annotations"
+        ] = sql_query.output_event_type.annotations
 
     if sql_query.output_event_type.repartitioning:
         payload["output_event_type"]["repartition_parameters"] = {

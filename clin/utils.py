@@ -44,14 +44,16 @@ def configure_logging(verbose: bool):
 
 def pretty_yaml(val: dict, indentation: int = 0) -> str:
     raw = highlight(
-        yaml.dump(val, sort_keys=False), YamlLexer(), _get_formatter()
+        yaml.dump(_remove_none(val), sort_keys=False), YamlLexer(), _get_formatter()
     ).strip()
     return _indent(raw, indentation)
 
 
 def pretty_json(val: dict, indentation: int = 0) -> str:
     raw = highlight(
-        json.dumps(val, indent=2, sort_keys=False), JsonLexer(), _get_formatter()
+        json.dumps(_remove_none(val), indent=2, sort_keys=False),
+        JsonLexer(),
+        _get_formatter(),
     ).strip()
     return _indent(raw, indentation)
 
@@ -63,3 +65,13 @@ def _indent(s: str, indentation: int) -> str:
 
 def _get_formatter() -> Formatter:
     return TerminalTrueColorFormatter() if sys.stdout.isatty() else NullFormatter()
+
+
+def _remove_none(obj):
+    """Recursively remove None values from dictionary."""
+    if isinstance(obj, (list, tuple, set)):
+        return type(obj)(_remove_none(x) for x in obj if x is not None)
+    elif isinstance(obj, dict):
+        return {k: _remove_none(v) for k, v in obj.items() if v is not None}
+    else:
+        return obj

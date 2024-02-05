@@ -17,6 +17,7 @@ class OutputEventType:
     repartitioning: Optional[Partitioning]
     cleanup: Cleanup
     partition_compaction_key_field: Optional[str]
+    annotations: dict[str, str]
 
     @staticmethod
     def from_spec(spec: dict[str, any]):
@@ -29,6 +30,7 @@ class OutputEventType:
             else None,
             cleanup=Cleanup.from_spec(spec["cleanup"]),
             partition_compaction_key_field=spec.get("partitionCompactionKeyField"),
+            annotations=spec.get("annotations", {}),
         )
 
     def to_spec(self) -> dict[str, any]:
@@ -44,6 +46,9 @@ class OutputEventType:
 
         if self.partition_compaction_key_field:
             spec["partitionCompactionKeyField"] = self.partition_compaction_key_field
+
+        if self.annotations:
+            spec["annotations"] = self.annotations
 
         return spec
 

@@ -71,8 +71,10 @@ override/replace another.
 environments:
     staging:
         nakadi_url: https://nakadi-staging.local
+        nakadi_sql_url: https://nakadi-sql-staging.local
     production:
         nakadi_url: https://nakadi-production.local
+        nakadi_sql_url: https://nakadi-sql-production.local
 ```
 
 ## Manifests format

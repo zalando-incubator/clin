@@ -70,6 +70,7 @@ class Cleanup:
     class Policy(str, Enum):
         DELETE = "delete"
         COMPACT = "compact"
+        COMPACT_AND_DELETE = "compact_and_delete"
 
         def __str__(self) -> str:
             return str(self.value)

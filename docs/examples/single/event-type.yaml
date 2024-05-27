@@ -10,7 +10,7 @@ spec:
       - important_key
     partitionCount: 2
   cleanup:
-    policy: compact # compact | delete
+    policy: compact # compact | delete | compact_and_delete
     retentionTimeDays: 4 # days before delete for corresponding policy
   annotations: # set of key-value pairs to define event type annotations
     "foo": "bar"

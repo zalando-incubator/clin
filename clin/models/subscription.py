@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Optional
 from uuid import UUID
 
@@ -30,6 +30,14 @@ class Subscription(Entity):
     @property
     def kind(self) -> Kind:
         return Kind.SUBSCRIPTION
+
+    def for_comparison_with(self, current: Subscription) -> Subscription:
+        return replace(
+            self,
+            annotations=current.annotations
+            if self.annotations is None
+            else self.annotations,
+        )
 
     @staticmethod
     def from_spec(spec: dict[str, any]) -> Subscription:

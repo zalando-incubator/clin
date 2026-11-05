@@ -114,12 +114,9 @@ spec:
       readers: [stups_example-consumer]
 ```
 
-Quote numeric values so YAML reads them as strings. When specified, the map is
-authoritative: keys not listed are removed, and `annotations: {}` clears all
-annotations. Omit `annotations` to leave existing annotations unmanaged, even
-when updating authorization. Inspect changes first with `clin apply -d -p`.
-For operator-managed subscriptions, manage annotations through the operator's
-resource rather than directly through Clin.
+Quote numeric values. Omit `annotations` to leave existing values unchanged;
+a specified map replaces them, and `annotations: {}` clears them. Preview with
+`clin apply -e staging -d -p subscription.yaml`.
 
 ### Template variables
 The manifest YAML can include template variables in double curly braces (`{{VAR}}`)

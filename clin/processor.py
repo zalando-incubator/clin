@@ -153,12 +153,9 @@ class Processor:
                 sub.initial_cursors = current.initial_cursors
                 diff = DeepDiff(
                     current,
-                    sub,
+                    sub.for_comparison_with(current),
                     ignore_order=True,
                     report_repetition=True,
-                    exclude_paths={"root.annotations"}
-                    if sub.annotations is None
-                    else None,
                 )
                 if diff:
                     self._maybe_print_diff(sub, diff)

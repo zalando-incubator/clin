@@ -88,6 +88,39 @@ Kind defines the type of Nakadi resource. Currently supported:
 [/docs/examples/single](/docs/examples/single) for the details of the
 properties.
 
+### Subscription annotations
+
+Subscriptions may specify arbitrary string annotations in `spec.annotations`.
+For example, to configure [Nakadi Auto-DLQ](https://nakadi.docs.zalando.net/nakadi-event-broker/subscriptions/#auto-dlq):
+
+```yaml
+kind: subscription
+spec:
+  owningApplication: stups_example-consumer
+  eventTypes: [example.input]
+  consumerGroup: main
+  annotations:
+    nakadi.zalando.org/subscription-max-event-send-count: "3"
+    nakadi.zalando.org/subscription-unprocessable-event-policy: "DEAD_LETTER_QUEUE"
+  auth:
+    teams:
+      admins: [example-team]
+      readers: [example-team]
+    users:
+      admins: []
+      readers: []
+    services:
+      admins: []
+      readers: [stups_example-consumer]
+```
+
+Quote numeric values so YAML reads them as strings. When specified, the map is
+authoritative: keys not listed are removed, and `annotations: {}` clears all
+annotations. Omit `annotations` to leave existing annotations unmanaged, even
+when updating authorization. Inspect changes first with `clin apply -d -p`.
+For operator-managed subscriptions, manage annotations through the operator's
+resource rather than directly through Clin.
+
 ### Template variables
 The manifest YAML can include template variables in double curly braces (`{{VAR}}`)
 which will be substituted from the external context.

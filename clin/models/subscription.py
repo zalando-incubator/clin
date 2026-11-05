@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 from uuid import UUID
 
@@ -17,6 +17,9 @@ class Subscription(Entity):
     event_types: list[str]
     consumer_group: str
     auth: ReadOnlyAuth
+    annotations: Optional[dict[str, str]] = None
+    read_from: str = "end"
+    initial_cursors: list[dict] = field(default_factory=list)
 
     def __str__(self) -> str:
         prefix = f"subscription"
@@ -30,12 +33,16 @@ class Subscription(Entity):
 
     @staticmethod
     def from_spec(spec: dict[str, any]) -> Subscription:
+        annotations = spec.get("annotations")
+        if "annotations" in spec:
+            validate_annotations(annotations)
         return Subscription(
             id=None,
             owning_application=spec["owningApplication"],
             event_types=spec["eventTypes"],
             consumer_group=spec["consumerGroup"],
             auth=ReadOnlyAuth.from_spec(spec["auth"]),
+            annotations=annotations,
         )
 
     @staticmethod
@@ -52,3 +59,13 @@ class Subscription(Entity):
 
     def to_spec(self) -> dict[str, any]:
         raise NotImplementedError()
+
+
+def validate_annotations(annotations):
+    if not isinstance(annotations, dict) or not all(
+        isinstance(key, str) and isinstance(value, str)
+        for key, value in annotations.items()
+    ):
+        raise ValueError(
+            "Subscription annotations must be a map of string keys and values; quote numeric values"
+        )

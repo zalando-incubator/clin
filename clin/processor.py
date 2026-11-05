@@ -149,7 +149,17 @@ class Processor:
             if current:
                 logging.debug("Found existing %s", current)
                 sub.id = current.id
-                diff = DeepDiff(current, sub, ignore_order=True, report_repetition=True)
+                sub.read_from = current.read_from
+                sub.initial_cursors = current.initial_cursors
+                diff = DeepDiff(
+                    current,
+                    sub,
+                    ignore_order=True,
+                    report_repetition=True,
+                    exclude_paths={"root.annotations"}
+                    if sub.annotations is None
+                    else None,
+                )
                 if diff:
                     self._maybe_print_diff(sub, diff)
                     self._maybe_print_payload(sub)

@@ -100,14 +100,16 @@ class Nakadi(HttpClient):
         matches = []
         seen = set()
         while True:
-            cursor = tuple(sorted(params.items()))
+            # Keep a stable snapshot of the query parameters to detect repeated pages.
+            page_request = tuple(sorted(params.items()))
             resp = requests.get(url, headers=self._headers, params=params)
             if resp.status_code != 200:
                 raise NakadiError(
                     f"Nakadi error during getting subscription for {params_str}", resp
                 )
-            seen.add(cursor)
+            seen.add(page_request)
             page = resp.json()
+            # Nakadi's event-type filter can include subscriptions with extra event types.
             matches.extend(
                 sub
                 for sub in page["items"]
@@ -118,7 +120,9 @@ class Nakadi(HttpClient):
             next_link = page.get("_links", {}).get("next")
             if not next_link:
                 return matches, resp
+            # Extract pagination from the next link, but keep using the configured URL.
             query = parse_qs(urlparse(next_link["href"]).query)
+            # Keep the original filters and replace only the pagination parameters.
             params = {
                 key: value
                 for key, value in params.items()

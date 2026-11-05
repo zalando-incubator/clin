@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import List, Optional
 from urllib.parse import parse_qs, urlparse
 
@@ -102,7 +103,13 @@ class Nakadi(HttpClient):
         while True:
             # Keep a stable snapshot of the query parameters to detect repeated pages.
             page_request = tuple(sorted(params.items()))
+            logging.debug("GET %s (subscription page %d)", url, len(seen) + 1)
             resp = requests.get(url, headers=self._headers, params=params)
+            logging.debug(
+                "-> subscription page %d response code %d",
+                len(seen) + 1,
+                resp.status_code,
+            )
             if resp.status_code != 200:
                 raise NakadiError(
                     f"Nakadi error during getting subscription for {params_str}", resp

@@ -17,7 +17,7 @@ class Subscription(Entity):
     event_types: list[str]
     consumer_group: str
     auth: ReadOnlyAuth
-    annotations: Optional[dict[str, str]] = None
+    annotations: Optional[dict[str, Optional[str]]] = None
     read_from: str = "end"
     initial_cursors: list[dict] = field(default_factory=list)
 
@@ -71,9 +71,9 @@ class Subscription(Entity):
 
 def validate_annotations(annotations):
     if not isinstance(annotations, dict) or not all(
-        isinstance(key, str) and isinstance(value, str)
+        isinstance(key, str) and (value is None or isinstance(value, str))
         for key, value in annotations.items()
     ):
         raise ValueError(
-            "Subscription annotations must be a map of string keys and values; quote numeric values"
+            "Subscription annotations must be a map of string keys and string or null values; quote numeric values"
         )

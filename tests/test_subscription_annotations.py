@@ -3,6 +3,7 @@ import logging
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 import yaml
@@ -120,7 +121,17 @@ def test_manifest_parses_auto_dlq_and_omitted_annotations(tmp_path, manifest):
 
 
 @pytest.mark.parametrize(
-    "annotations", [None, [], "value", {"key": 3}, {1: "value"}, {"key": None}]
+    "annotations",
+    [
+        None,
+        [],
+        "value",
+        {"key": 3},
+        {1: "value"},
+        {"key": True},
+        {"key": []},
+        {"key": {}},
+    ],
 )
 def test_invalid_manifest_annotations_fail_before_requests(
     manifest, annotations, broker, tmp_path, caplog
@@ -128,21 +139,37 @@ def test_invalid_manifest_annotations_fail_before_requests(
     manifest["spec"]["annotations"] = annotations
     result = apply_cli(tmp_path, manifest, caplog, execute=True)
     assert result.exit_code != 0
-    assert "annotations must be a map of string keys and values" in caplog.text
+    assert (
+        "annotations must be a map of string keys and string or null values"
+        in caplog.text
+    )
     assert broker.writes == []
 
 
+@pytest.mark.parametrize(
+    "annotations", [ANNOTATIONS, {"nullable": None, "text": "null"}]
+)
 def test_create_payload_includes_annotations_and_omits_unmanaged(
-    manifest, broker, tmp_path, caplog
+    manifest, broker, tmp_path, caplog, annotations
 ):
     broker.subscription = None
-    manifest["spec"]["annotations"] = ANNOTATIONS
+    manifest["spec"]["annotations"] = annotations
     assert apply_cli(tmp_path, manifest, caplog).exit_code == 0
-    assert '"annotations"' in caplog.text
+    payload_output = next(
+        record.getMessage()
+        for record in caplog.records
+        if "Nakadi payload" in record.getMessage()
+    )
+    shown_payload = json.loads(payload_output.split("\n", 1)[1])
+    assert shown_payload["annotations"] == annotations
     assert broker.writes == []
     assert apply_cli(tmp_path, manifest, caplog, execute=True).exit_code == 0
     assert broker.writes[-1][0] == "POST"
-    assert broker.writes[-1][2]["annotations"] == ANNOTATIONS
+    assert broker.writes[-1][2] == shown_payload
+    assert broker.subscription["annotations"] == annotations
+    assert apply_cli(tmp_path, manifest, caplog, execute=True).exit_code == 0
+    assert "Up to date" in caplog.text
+    assert len(broker.writes) == 1
     broker.subscription = None
     del manifest["spec"]["annotations"]
     assert apply_cli(tmp_path, manifest, caplog, execute=True).exit_code == 0
@@ -156,6 +183,10 @@ def test_create_payload_includes_annotations_and_omits_unmanaged(
         ({"key": "old"}, {"key": "new"}),
         ({"keep": "yes", "removed": "old"}, {"keep": "yes"}),
         ({"key": "old"}, {}),
+        ({}, {"key": None}),
+        ({"key": "old"}, {"key": None}),
+        ({"key": None}, {"key": "new"}),
+        ({"key": None}, {}),
     ],
 )
 def test_annotation_changes_dry_run_update_and_converge(
@@ -182,9 +213,15 @@ def test_annotation_changes_dry_run_update_and_converge(
     )
     shown_payload = json.loads(payload_output.split("\n", 1)[1])
     assert shown_payload["annotations"] == desired
+    missing = object()
     for key in set(current) | set(desired):
-        if current.get(key) != desired.get(key):
+        if current.get(key, missing) != desired.get(key, missing):
             assert key in diff_output
+    shown_diff = yaml.safe_load(diff_output.split("\n", 1)[1])
+    if "type_changes" in shown_diff:
+        change = shown_diff["type_changes"]["root.annotations['key']"]
+        assert change["old_value"] == current["key"]
+        assert change["new_value"] == desired["key"]
     assert broker.writes == []
     assert apply_cli(tmp_path, manifest, caplog, execute=True).exit_code == 0
     assert broker.writes[-1][0] == "PUT"
@@ -195,10 +232,11 @@ def test_annotation_changes_dry_run_update_and_converge(
     assert len(broker.writes) == 1
 
 
+@pytest.mark.parametrize("external_value", ["keep", None])
 def test_omission_preserves_annotations_and_immutable_cursors(
-    manifest, broker, tmp_path, caplog
+    manifest, broker, tmp_path, caplog, external_value
 ):
-    broker.subscription["annotations"] = {"external": "keep"}
+    broker.subscription["annotations"] = {"external": external_value}
     broker.subscription["read_from"] = "cursors"
     broker.subscription["initial_cursors"] = [
         {"event_type": "example.input", "partition": "0", "offset": "001"}
@@ -213,7 +251,7 @@ def test_omission_preserves_annotations_and_immutable_cursors(
     assert sent["read_from"] == "cursors"
     assert sent["initial_cursors"] == original_cursors
     assert broker.subscription["initial_cursors"] == original_cursors
-    assert broker.subscription["annotations"] == {"external": "keep"}
+    assert broker.subscription["annotations"] == {"external": external_value}
 
 
 def test_managed_update_retains_non_default_cursors(manifest, broker, tmp_path, caplog):
@@ -241,46 +279,158 @@ def test_malformed_response_annotations_rejected(nakadi_payload):
         subscription_from_payload(nakadi_payload)
 
 
-def test_lookup_pages_and_matches_full_identity(monkeypatch, nakadi_payload):
-    other = dict(nakadi_payload, id="other", event_types=["example.input", "extra"])
-    calls = []
-
-    def get(url, headers, params):
-        calls.append((url, dict(params)))
-        if len(calls) == 1:
-            return response(
+@pytest.mark.parametrize("match_page", [1, 2])
+@pytest.mark.parametrize("later_page", ["duplicate", "error"])
+def test_lookup_stops_at_first_match(
+    monkeypatch, nakadi_payload, match_page, later_page
+):
+    pages = []
+    if match_page == 2:
+        pages.append(
+            response(
                 200,
                 {
-                    "items": [other],
-                    "_links": {"next": {"href": "/subscriptions?offset=20&limit=20"}},
+                    "items": [dict(nakadi_payload, consumer_group="other")],
+                    "_links": {"next": {"href": "/subscriptions?offset=1&limit=1"}},
                 },
             )
-        return response(200, {"items": [nakadi_payload]})
-
+        )
+    pages.append(
+        response(
+            200,
+            {
+                "items": [nakadi_payload],
+                "_links": {
+                    "next": {"href": f"/subscriptions?offset={match_page}&limit=1"}
+                },
+            },
+        )
+    )
+    pages.append(
+        response(200, {"items": [nakadi_payload]})
+        if later_page == "duplicate"
+        else response(429)
+    )
+    get = Mock(side_effect=pages)
     monkeypatch.setattr("clin.clients.nakadi.requests.get", get)
     sub = Nakadi("https://example.invalid", None).get_subscription(
         ["example.input"], "stups_example-consumer", "main"
     )
     assert sub.id == "example-id"
-    assert calls[1][1]["offset"] == "20"
-    assert calls[1][0] == "https://example.invalid/subscriptions"
+    assert get.call_count == match_page
 
 
-def test_lookup_rejects_repeated_pagination_and_failed_requests(monkeypatch):
+@pytest.mark.parametrize("pagination", [{"offset": "3"}, {"token": "Wnext-page"}])
+def test_lookup_pages_and_matches_full_identity(
+    monkeypatch, nakadi_payload, pagination
+):
+    event_types = ["example.input", "example.other"]
+    match = dict(nakadi_payload, event_types=list(reversed(event_types)))
+    other_subscriptions = [
+        dict(match, id="expanded", event_types=event_types + ["extra"]),
+        dict(match, id="other-app", owning_application="other-app"),
+        dict(match, id="other-group", consumer_group="other-group"),
+    ]
+    pagination_query = "&".join(f"{key}={value}" for key, value in pagination.items())
+    next_link = (
+        "https://example.invalid/subscriptions?event_type=example.other"
+        "&event_type=example.input&owning_application=stups_example-consumer"
+        f"&limit=3&{pagination_query}"
+    )
+    get = Mock(
+        side_effect=[
+            response(
+                200,
+                {"items": other_subscriptions, "_links": {"next": {"href": next_link}}},
+            ),
+            response(200, {"items": [match]}),
+        ]
+    )
+    monkeypatch.setattr("clin.clients.nakadi.requests.get", get)
+    sub = Nakadi("https://example.invalid", None).get_subscription(
+        event_types, "stups_example-consumer", "main"
+    )
+    assert sub.id == "example-id"
+    assert get.call_count == 2
+    assert get.call_args[0] == ("https://example.invalid/subscriptions",)
+    assert get.call_args[1]["params"] == {
+        "event_type": "example.input,example.other",
+        "owning_application": "stups_example-consumer",
+        "limit": "3",
+        **pagination,
+    }
+
+
+def test_lookup_returns_none_after_exhausting_pages(monkeypatch, nakadi_payload):
+    get = Mock(
+        side_effect=[
+            response(
+                200,
+                {
+                    "items": [dict(nakadi_payload, consumer_group="other")],
+                    "_links": {"next": {"href": "/subscriptions?offset=1&limit=1"}},
+                },
+            ),
+            response(200, {"items": []}),
+        ]
+    )
+    monkeypatch.setattr("clin.clients.nakadi.requests.get", get)
+    assert (
+        Nakadi("https://example.invalid", None).get_subscription(
+            ["example.input"], "stups_example-consumer", "main"
+        )
+        is None
+    )
+    assert get.call_count == 2
+
+
+def test_expanded_event_type_set_creates_a_different_subscription(
+    manifest, broker, tmp_path, caplog
+):
+    broker.subscription["event_types"].append("extra")
+    manifest["spec"]["annotations"] = ANNOTATIONS
+    assert apply_cli(tmp_path, manifest, caplog, execute=True).exit_code == 0
+    assert len(broker.writes) == 1
+    method, url, payload = broker.writes[0]
+    assert method == "POST"
+    assert url == "https://example.invalid/subscriptions"
+    assert payload["event_types"] == ["example.input"]
+    assert payload["annotations"] == ANNOTATIONS
+
+
+@pytest.mark.parametrize("query", ["offset=20", "token=Wnext-page", "limit=20"])
+def test_lookup_rejects_invalid_pagination(monkeypatch, query):
     monkeypatch.setattr(
         "clin.clients.nakadi.requests.get",
         lambda *args, **kwargs: response(
-            200, {"items": [], "_links": {"next": {"href": "/subscriptions?offset=20"}}}
+            200, {"items": [], "_links": {"next": {"href": f"/subscriptions?{query}"}}}
         ),
     )
     client = Nakadi("https://example.invalid", None)
     with pytest.raises(NakadiError, match="Invalid subscription pagination"):
         client.get_subscription(["example.input"], "app", "main")
-    monkeypatch.setattr(
-        "clin.clients.nakadi.requests.get", lambda *args, **kwargs: response(503)
-    )
+
+
+@pytest.mark.parametrize("failure_page", [1, 2])
+def test_lookup_reports_http_failure_before_match(monkeypatch, failure_page):
+    pages = []
+    if failure_page == 2:
+        pages.append(
+            response(
+                200,
+                {
+                    "items": [],
+                    "_links": {"next": {"href": "/subscriptions?token=Wnext-page"}},
+                },
+            )
+        )
+    get = Mock(side_effect=pages + [response(503)])
+    monkeypatch.setattr("clin.clients.nakadi.requests.get", get)
     with pytest.raises(NakadiError, match="503"):
-        client.get_subscription(["example.input"], "app", "main")
+        Nakadi("https://example.invalid", None).get_subscription(
+            ["example.input"], "app", "main"
+        )
+    assert get.call_count == failure_page
 
 
 def test_update_failure_is_reported(manifest, broker, monkeypatch, tmp_path, caplog):

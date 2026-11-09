@@ -90,33 +90,20 @@ properties.
 
 ### Subscription annotations
 
-Subscriptions may specify arbitrary string annotations in `spec.annotations`.
-For example, to configure [Nakadi Auto-DLQ](https://nakadi.docs.zalando.net/nakadi-event-broker/subscriptions/#auto-dlq):
+Add `spec.annotations` to a subscription manifest, for example to enable
+[Nakadi Auto-DLQ](https://nakadi.docs.zalando.net/nakadi-event-broker/subscriptions/#auto-dlq):
 
 ```yaml
-kind: subscription
 spec:
-  owningApplication: stups_example-consumer
-  eventTypes: [example.input]
-  consumerGroup: main
   annotations:
     nakadi.zalando.org/subscription-max-event-send-count: "3"
     nakadi.zalando.org/subscription-unprocessable-event-policy: "DEAD_LETTER_QUEUE"
-  auth:
-    teams:
-      admins: [example-team]
-      readers: [example-team]
-    users:
-      admins: []
-      readers: []
-    services:
-      admins: []
-      readers: [stups_example-consumer]
 ```
 
-Quote numeric values. Omit `annotations` to leave existing values unchanged;
-a specified map replaces them, and `annotations: {}` clears them. Preview with
-`clin apply -e staging -d -p subscription.yaml`.
+Keys must be strings; values may be strings or `null`. Quote numeric values.
+Omit `annotations` to leave existing values unchanged; a specified map replaces
+them, and `annotations: {}` clears them. A null value keeps the key; omit the key
+from the map to remove it.
 
 ### Template variables
 The manifest YAML can include template variables in double curly braces (`{{VAR}}`)

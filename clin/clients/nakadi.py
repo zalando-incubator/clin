@@ -83,22 +83,7 @@ class Nakadi(HttpClient):
             "event_type": ",".join(event_types),
             "owning_application": owning_application,
         }
-        subscriptions, resp = self._list_subscription_matches(
-            url, params, params_str, event_types, owning_application, consumer_group
-        )
-        if len(subscriptions) > 1:
-            raise NakadiError(f"Got multiple subscriptions for {params_str}", resp)
-        elif len(subscriptions) == 1:
-            payload = subscriptions[0]
-            sub = subscription_from_payload(payload)
-            return sub
-        else:
-            return None
-
-    def _list_subscription_matches(
-        self, url, params, params_str, event_types, owning_application, consumer_group
-    ):
-        matches = []
+        expected_event_types = set(event_types)
         seen = set()
         while True:
             # Keep a stable snapshot of the query parameters to detect repeated pages.
@@ -117,16 +102,18 @@ class Nakadi(HttpClient):
             seen.add(page_request)
             page = resp.json()
             # Nakadi's event-type filter can include subscriptions with extra event types.
-            matches.extend(
-                sub
-                for sub in page["items"]
-                if sub["consumer_group"] == consumer_group
-                and sub["owning_application"] == owning_application
-                and set(sub["event_types"]) == set(event_types)
-            )
+            for sub in page["items"]:
+                if (
+                    sub["consumer_group"] == consumer_group
+                    and sub["owning_application"] == owning_application
+                    and set(sub["event_types"]) == expected_event_types
+                ):
+                    # Nakadi guarantees uniqueness by owning_application, event_types,
+                    # and consumer_group, so the first exact match is sufficient.
+                    return subscription_from_payload(sub)
             next_link = page.get("_links", {}).get("next")
             if not next_link:
-                return matches, resp
+                return None
             # Extract pagination from the next link, but keep using the configured URL.
             query = parse_qs(urlparse(next_link["href"]).query)
             # Keep the original filters and replace only the pagination parameters.

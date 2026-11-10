@@ -102,3 +102,13 @@ def test_errors_when_config_is_invalid_yaml(m_isfile: MagicMock):
 
 def _only_files_exist(file_names: List[str]):
     return lambda *args, **kwargs: args[0] in file_names
+
+
+@patch("os.path.isfile")
+def test_errors_when_config_file_is_empty(m_isfile: MagicMock):
+    m_isfile.side_effect = _only_files_exist(all_config_files)
+
+    with patch("clin.config.open", mock_open(read_data="")), pytest.raises(Exception) as ex:
+        load_config()
+
+    assert str(ex.value).startswith(f"Invalid configuration file: {all_config_files[0]}")

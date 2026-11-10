@@ -149,7 +149,14 @@ class Processor:
             if current:
                 logging.debug("Found existing %s", current)
                 sub.id = current.id
-                diff = DeepDiff(current, sub, ignore_order=True, report_repetition=True)
+                sub.read_from = current.read_from
+                sub.initial_cursors = current.initial_cursors
+                diff = DeepDiff(
+                    current,
+                    sub.for_comparison_with(current),
+                    ignore_order=True,
+                    report_repetition=True,
+                )
                 if diff:
                     self._maybe_print_diff(sub, diff)
                     self._maybe_print_payload(sub)
@@ -189,7 +196,11 @@ class Processor:
                 f"{MODIFY_COLOR}⦿ Found %d changes:{Fore.RESET} %s\n%s",
                 len(diff),
                 entity,
-                pretty_yaml(safe_diff, indentation=OUTPUT_INDENTATION),
+                pretty_yaml(
+                    safe_diff,
+                    indentation=OUTPUT_INDENTATION,
+                    preserve_none=isinstance(entity, Subscription),
+                ),
             )
 
     def _maybe_print_payload(self, entity: Entity):
@@ -207,7 +218,11 @@ class Processor:
             logging.info(
                 f"{MODIFY_COLOR}⦿ Nakadi payload:{Fore.RESET} %s\n%s",
                 entity,
-                pretty_json(payload, indentation=OUTPUT_INDENTATION),
+                pretty_json(
+                    payload,
+                    indentation=OUTPUT_INDENTATION,
+                    preserve_none=isinstance(entity, Subscription),
+                ),
             )
 
     def _update_event_type(self, nakadi: Nakadi, et: EventType):

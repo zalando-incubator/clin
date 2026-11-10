@@ -88,6 +88,23 @@ Kind defines the type of Nakadi resource. Currently supported:
 [/docs/examples/single](/docs/examples/single) for the details of the
 properties.
 
+### Subscription annotations
+
+Add `spec.annotations` to a subscription manifest, for example to enable
+[Nakadi Auto-DLQ](https://nakadi.docs.zalando.net/nakadi-event-broker/subscriptions/#auto-dlq):
+
+```yaml
+spec:
+  annotations:
+    nakadi.zalando.org/subscription-max-event-send-count: "3"
+    nakadi.zalando.org/subscription-unprocessable-event-policy: "DEAD_LETTER_QUEUE"
+```
+
+Keys must be strings; values may be strings or `null`. Quote numeric values.
+Omit `annotations` to leave existing values unchanged; a specified map replaces
+them, and `annotations: {}` clears them. A null value keeps the key; omit the key
+from the map to remove it.
+
 ### Template variables
 The manifest YAML can include template variables in double curly braces (`{{VAR}}`)
 which will be substituted from the external context.

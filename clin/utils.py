@@ -42,16 +42,20 @@ def configure_logging(verbose: bool):
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
-def pretty_yaml(val: dict, indentation: int = 0) -> str:
+def pretty_yaml(val: dict, indentation: int = 0, *, preserve_none: bool = False) -> str:
     raw = highlight(
-        yaml.dump(_remove_none(val), sort_keys=False), YamlLexer(), _get_formatter()
+        yaml.dump(val if preserve_none else _remove_none(val), sort_keys=False),
+        YamlLexer(),
+        _get_formatter(),
     ).strip()
     return _indent(raw, indentation)
 
 
-def pretty_json(val: dict, indentation: int = 0) -> str:
+def pretty_json(val: dict, indentation: int = 0, *, preserve_none: bool = False) -> str:
     raw = highlight(
-        json.dumps(_remove_none(val), indent=2, sort_keys=False),
+        json.dumps(
+            val if preserve_none else _remove_none(val), indent=2, sort_keys=False
+        ),
         JsonLexer(),
         _get_formatter(),
     ).strip()

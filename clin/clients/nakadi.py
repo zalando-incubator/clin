@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import List, Optional
+from urllib.parse import parse_qs, urlparse
 
 import requests
 from requests import HTTPError, Response
@@ -21,7 +23,7 @@ from clin.models.event_type import (
     Schema,
     Audience,
 )
-from clin.models.subscription import Subscription
+from clin.models.subscription import Subscription, validate_annotations
 from clin.utils import MS_IN_DAY
 
 
@@ -81,23 +83,58 @@ class Nakadi(HttpClient):
             "event_type": ",".join(event_types),
             "owning_application": owning_application,
         }
-        resp = requests.get(url, headers=self._headers, params=params)
-        if resp.status_code != 200:
-            raise NakadiError(
-                f"Nakadi error during getting subscription for {params_str}", resp
+        expected_event_types = set(event_types)
+        seen = set()
+        while True:
+            # Keep a stable snapshot of the query parameters to detect repeated pages.
+            page_request = tuple(sorted(params.items()))
+            logging.debug("GET %s (subscription page %d)", url, len(seen) + 1)
+            resp = requests.get(url, headers=self._headers, params=params)
+            logging.debug(
+                "-> subscription page %d response code %d",
+                len(seen) + 1,
+                resp.status_code,
             )
-
-        subscriptions = [
-            s for s in resp.json()["items"] if s["consumer_group"] == consumer_group
-        ]
-        if len(subscriptions) > 1:
-            raise NakadiError(f"Got multiple subscriptions for {params_str}", resp)
-        elif len(subscriptions) == 1:
-            payload = subscriptions[0]
-            sub = subscription_from_payload(payload)
-            return sub
-        else:
-            return None
+            if resp.status_code != 200:
+                raise NakadiError(
+                    f"Nakadi error during getting subscription for {params_str}", resp
+                )
+            seen.add(page_request)
+            page = resp.json()
+            # Nakadi's event-type filter can include subscriptions with extra event types.
+            for sub in page["items"]:
+                if (
+                    sub["consumer_group"] == consumer_group
+                    and sub["owning_application"] == owning_application
+                    and set(sub["event_types"]) == expected_event_types
+                ):
+                    # Nakadi guarantees uniqueness by owning_application, event_types,
+                    # and consumer_group, so the first exact match is sufficient.
+                    return subscription_from_payload(sub)
+            next_link = page.get("_links", {}).get("next")
+            if not next_link:
+                return None
+            # Extract pagination from the next link, but keep using the configured URL.
+            query = parse_qs(urlparse(next_link["href"]).query)
+            # Keep the original filters and replace only the pagination parameters.
+            params = {
+                key: value
+                for key, value in params.items()
+                if key not in ("offset", "limit", "token")
+            }
+            params.update(
+                {
+                    key: query[key][0]
+                    for key in ("offset", "limit", "token")
+                    if key in query
+                }
+            )
+            if tuple(sorted(params.items())) in seen or not any(
+                key in query for key in ("offset", "token")
+            ):
+                raise NakadiError(
+                    f"Invalid subscription pagination for {params_str}", resp
+                )
 
     def create_subscription(self, subscription: Subscription) -> Subscription:
         payload = json.dumps(subscription_to_payload(subscription))
@@ -227,21 +264,31 @@ def event_type_from_payload(payload: dict, partition_count: int) -> EventType:
 
 
 def subscription_to_payload(subscription: Subscription) -> dict:
-    return {
+    payload = {
         "owning_application": subscription.owning_application,
         "event_types": subscription.event_types,
         "consumer_group": subscription.consumer_group,
-        "initial_cursors": [],
-        "read_from": "end",
+        "initial_cursors": subscription.initial_cursors,
+        "read_from": subscription.read_from,
         "authorization": auth_to_payload(subscription.auth),
     }
+    if subscription.annotations is not None:
+        payload["annotations"] = subscription.annotations
+    return payload
 
 
 def subscription_from_payload(payload: dict) -> Subscription:
+    annotations = payload.get("annotations")
+    if annotations is None:
+        annotations = {}
+    validate_annotations(annotations)
     return Subscription(
         id=payload["id"],
         owning_application=payload["owning_application"],
         event_types=payload["event_types"],
         consumer_group=payload["consumer_group"],
         auth=ro_auth_from_payload(payload["authorization"]),
+        annotations=annotations,
+        read_from=payload.get("read_from", "end"),
+        initial_cursors=payload.get("initial_cursors") or [],
     )

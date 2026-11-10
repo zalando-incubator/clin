@@ -56,6 +56,12 @@ def load_config() -> AppConfig:
                     f"Failed to parse configuration file: {file_name}: {str(ex)}"
                 )
 
+            if not isinstance(content, dict):
+                raise ConfigurationError(
+                    f"Invalid configuration file: {file_name}: "
+                    "expected a mapping with an 'environments' section."
+                )
+
             return AppConfig.load(content)
 
     raise ConfigurationError(
